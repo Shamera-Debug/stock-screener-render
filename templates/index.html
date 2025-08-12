@@ -4,20 +4,56 @@
     <meta charset="UTF-8">
     <title>52주 신고가 근접 종목</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 2em; background-color: #f4f6f8; color: #333; }
-        table { width: 100%; border-collapse: collapse; box-shadow: 0 2px 15px rgba(0,0,0,0.1); background-color: #fff; }
-        th, td { border: 1px solid #e0e0e0; text-align: left; padding: 12px 15px; }
-        thead { background-color: #007bff; color: #ffffff; }
-        th { font-weight: 600; }
-        tbody tr:nth-of-type(even) { background-color: #f9f9f9; }
-        tbody tr:hover { background-color: #f1f1f1; }
-        h1 { text-align: center; color: #007bff; margin-bottom: 1.5em; }
-        .container { max-width: 1200px; margin: auto; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            margin: 2em; 
+            background-color: #f4f6f8; 
+            color: #333; 
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: auto; 
+        }
+        h1 { 
+            text-align: center; 
+            color: #007bff; 
+            margin-bottom: 1.5em; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1); 
+            background-color: #fff; 
+        }
+        th, td { 
+            border: 1px solid #e0e0e0; 
+            text-align: left; 
+            padding: 12px 15px; 
+        }
+        tbody tr:nth-of-type(even) { 
+            background-color: #f9f9f9; 
+        }
+        tbody tr:hover { 
+            background-color: #f1f1f1; 
+        }
+
+        /* --- ✅ [수정] 헤더 고정을 위한 CSS 코드 --- */
+        thead th {
+            position: sticky;
+            top: 0; /* 화면 맨 위에 고정 */
+            z-index: 10; /* 다른 내용 위로 올라오도록 설정 */
+            
+            /* 스크롤 시에도 기존 스타일 유지 */
+            background-color: #007bff;
+            color: #ffffff;
+            font-weight: 600;
+        }
+        /* ------------------------------------ */
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📈 NASDAQ 52주 신고가 근접 종목</h1>
+        <h1>📈 미국 신고가 근접 종목</h1>
         <table>
             <thead>
                 <tr>
