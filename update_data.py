@@ -7,6 +7,7 @@ import os
 import sys
 import requests # ✅ [추가] API 요청을 위한 requests 라이브러리
 from pykrx import stock
+import openpyxl
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -43,6 +44,7 @@ def get_stocks_by_country(country_code, config):
     df = pd.DataFrame()
     try:
         if country_code == 'us':
+            # 미국: Finviz 사용 (기존과 동일)
             market_cap_filter = config['market_cap_filter']
             all_dfs = []
             for exchange in ['NASDAQ', 'NYSE']:
@@ -53,46 +55,50 @@ def get_stocks_by_country(country_code, config):
                 exchange_df = foverview.screener_view(order='Market Cap.', ascend=False)
                 all_dfs.append(exchange_df)
             df = pd.concat(all_dfs, ignore_index=True)
+            # 미국은 여기서 필터링이 끝났으므로 바로 반환
+            logging.info(f"성공! 총 {len(df)}개 기업 정보를 확인합니다.")
+            return df
 
         elif country_code == 'kr':
+            # 한국: pykrx 사용 (기존과 동일)
             logging.info("pykrx를 통해 KOSPI, KOSDAQ 종목 목록 가져오는 중...")
-            kospi_tickers = stock.get_market_ticker_list(market="KOSPI")
-            kosdaq_tickers = stock.get_market_ticker_list(market="KOSDAQ")
-            all_tickers = kospi_tickers + kosdaq_tickers
-            df = pd.DataFrame(all_tickers, columns=['Ticker'])
-            df['Ticker'] = df['Ticker'].apply(lambda x: f"{x}.KS")
+            kospi = stock.get_market_ticker_list(market="KOSPI")
+            kosdaq = stock.get_market_ticker_list(market="KOSDAQ")
+            df['Ticker'] = [f"{ticker}.KS" for ticker in kospi] + [f"{ticker}.KQ" for ticker in kosdaq]
 
-        elif country_code in ['jp', 'hk']:
-            # ✅ [수정] EODHD의 공식 거래소 코드로 변경
-            exchange_code_map = {
-                'jp': 'T', # Tokyo Stock Exchange
-                'hk': 'HK'   # Hong Kong Stock Exchange
-            }
-            exchange_code = exchange_code_map[country_code]
+        elif country_code == 'jp':
+            # ✅ [최종 수정] 일본: JPX 공식 엑셀 파일 직접 읽기
+            logging.info("일본거래소(JPX) 공식 상장사 목록 엑셀 파일 다운로드 중...")
+            url = "https://www.jpx.co.jp/english/markets/statistics-equities/misc/tvdivq0000001vg2-att/data_j.xls"
+            df_jpx = pd.read_excel(url, header=1) # 엑셀 파일의 두 번째 줄부터 데이터가 시작됨
 
-            logging.info(f"EODHD API를 통해 {exchange_code} 종목 목록 가져오는 중...")
+            # 'Code'(종목코드) 컬럼을 yfinance 형식(.T)으로 변경
+            df['Ticker'] = df_jpx['Code'].astype(str) + '.T'
 
-            api_url = f"https://eodhistoricaldata.com/api/exchange-symbol-list/{exchange_code}?api_token={EODHD_API_KEY}&fmt=json"
+        elif country_code == 'hk':
+            # 홍콩: 위키피디아 스크래핑 (기존과 동일)
+            logging.info("Wikipedia에서 홍콩 증권거래소 종목 목록 가져오는 중...")
+            url = "https://en.wikipedia.org/wiki/List_of_companies_listed_on_the_Hong_Kong_Stock_Exchange"
+            tables = pd.read_html(url)
+            df_hk = tables[0] # 홍콩은 첫 번째 테이블
+            df_hk.rename(columns={'Ticker': 'Stock Code'}, inplace=True, errors='ignore')
+            df['Ticker'] = df_hk['Stock Code'].astype(str).str.zfill(4) + '.HK'
 
-            response = requests.get(api_url)
-            # --- ✅ [디버깅 코드 추가] ---
-            # 서버가 보낸 실제 응답 내용을 그대로 출력해 봅니다.
-            logging.info("===== EODHD API 응답 원본 =====")
-            logging.info(response.text)
-            logging.info("==============================")
-            # ---------------------------
-            data = response.json()
-            
-            df = pd.DataFrame(data)
-            df.rename(columns={'Code': 'Ticker'}, inplace=True)
-            # yfinance가 인식하도록 Ticker 포맷 변경 (예: 7203 -> 7203.T)
-            if country_code == 'jp':
-                df['Ticker'] = df['Ticker'] + '.T'
-            elif country_code == 'hk':
-                df['Ticker'] = df['Ticker'] + '.HK'
+        # 미국 외 국가: 시가총액으로 상위 N개 필터링
+        logging.info(f"총 {len(df)}개 종목의 시가총액 정보 조회 시작 (시간 소요)...")
+        market_caps = []
+        for ticker in df['Ticker']:
+            try:
+                info = yf.Ticker(ticker).info
+                market_caps.append({'Ticker': ticker, 'MarketCap': info.get('marketCap', 0)})
+            except Exception:
+                continue # 개별 종목 조회 실패 시 건너뛰기
 
-        logging.info(f"성공! 총 {len(df)}개 기업 정보를 확인합니다.")
-        return df
+        df_caps = pd.DataFrame(market_caps)
+        df_caps = df_caps.sort_values(by='MarketCap', ascending=False).head(config.get('top_n', 1000))
+
+        logging.info(f"성공! 시가총액 상위 {len(df_caps)}개 기업 정보를 확인합니다.")
+        return df_caps
 
     except Exception as e:
         logging.error(f"{country_name} 기업 목록을 불러오는 데 실패했습니다: {e}")
@@ -171,6 +177,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
