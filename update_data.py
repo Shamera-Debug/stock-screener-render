@@ -17,7 +17,7 @@ def get_nasdaq_market_cap_stocks():
     try:
         foverview = Overview()
         filters_dict = {
-            'Exchange': 'NASDAQ',
+            'Exchange': 'USA',
             'Market Cap.': '+Mid (over $2bln)',
             'Industry': 'Stocks only (ex-Funds)',
         }
@@ -103,3 +103,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
