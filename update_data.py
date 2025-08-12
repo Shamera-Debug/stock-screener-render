@@ -3,6 +3,7 @@ import pandas as pd
 from finvizfinance.screener.overview import Overview
 import logging
 import json
+import os
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -10,30 +11,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # 데이터를 저장할 파일 이름
 DATA_FILE = 'stocks.json'
 
-def format_market_cap(cap_string):
-    if not isinstance(cap_string, str):
-        return 'N/A'
-    cap_string = cap_string.upper()
-    try:
-        if 'T' in cap_string:
-            num = float(cap_string.replace('T', ''))
-            return f"{num:,.2f}T"
-        elif 'B' in cap_string:
-            num = float(cap_string.replace('B', ''))
-            return f"{num:,.2f}B"
-        elif 'M' in cap_string:
-            num = float(cap_string.replace('M', ''))
-            return f"{num:,.2f}M"
-        else:
-            return f"${float(cap_string):,.0f}"
-    except (ValueError, TypeError):
-        return cap_string
-
+# finviz에서 시가총액 20억 달러 이상 기업 필터링
 def get_nasdaq_market_cap_stocks():
     logging.info("finvizfinance 스크리너를 통해 나스닥 기업 정보를 불러오는 중...")
     try:
         foverview = Overview()
-        # 시가총액 20억 달러(2B) 이상 기업을 대상으로 합니다.
         filters_dict = {
             'Exchange': 'NASDAQ',
             'Market Cap.': '+Mid (over $2bln)',
@@ -47,6 +29,7 @@ def get_nasdaq_market_cap_stocks():
         logging.error(f"나스닥 기업 목록을 불러오는 데 실패했습니다: {e}")
         return pd.DataFrame()
 
+# yfinance로 상세 정보 스크리닝
 def find_52_week_high_stocks_from_df(stocks_df):
     if stocks_df.empty:
         return []
@@ -58,36 +41,42 @@ def find_52_week_high_stocks_from_df(stocks_df):
         ticker = row['Ticker']
         try:
             stock_yf = yf.Ticker(ticker)
+            
+            # .info에서 모든 상세 정보를 한번에 가져옵니다.
+            info = stock_yf.info
+            
+            # .info에 'fiftyTwoWeekHigh' 키가 없을 경우를 대비해 history도 사용
             hist = stock_yf.history(period="1y", interval="1d")
             if hist.empty:
                 continue
+
+            current_price = info.get('regularMarketPrice', hist['Close'].iloc[-1])
+            high_52_week = info.get('fiftyTwoWeekHigh', hist['High'].max())
             
-            # ✅ [수정 1] yfinance의 info 객체를 가져옵니다.
-            info = stock_yf.info
-            
-            current_price = hist['Close'].iloc[-1]
-            high_52_week = hist['High'].max()
-            
+            if not current_price or not high_52_week:
+                continue
+
             if current_price >= high_52_week * 0.98:
-                # ✅ [수정 2] 시가총액을 info 객체에서 직접 가져옵니다.
+                # 시가총액을 info 객체에서 직접 가져와서 처리합니다.
                 market_cap_value = info.get('marketCap', 0)
-                # 시가총액을 읽기 쉽게 B, T 단위로 변환
-                if market_cap_value > 1_000_000_000_000:
-                    market_cap_str = f"{market_cap_value / 1_000_000_000_000:.2f}T"
-                elif market_cap_value > 1_000_000_000:
-                    market_cap_str = f"{market_cap_value / 1_000_000_000:.2f}B"
-                elif market_cap_value > 1_000_000:
-                    market_cap_str = f"{market_cap_value / 1_000_000:.2f}M"
-                else:
-                    market_cap_str = f"${market_cap_value:,}"
+                market_cap_str = "N/A" # 기본값
+                if market_cap_value > 0:
+                    if market_cap_value >= 1_000_000_000_000:
+                        market_cap_str = f"{market_cap_value / 1_000_000_000_000:.2f}T"
+                    elif market_cap_value >= 1_000_000_000:
+                        market_cap_str = f"{market_cap_value / 1_000_000_000:.2f}B"
+                    elif market_cap_value >= 1_000_000:
+                        market_cap_str = f"{market_cap_value / 1_000_000:.2f}M"
+                    else:
+                        market_cap_str = f"${market_cap_value:,}"
 
                 stock_data = {
                     'Ticker': ticker,
-                    'Company Name': info.get('longName', row.get('Company', 'N/A')), # info 이름이 더 정확
-                    'Sector': info.get('sector', row.get('Sector', 'N/A')),
-                    'Industry': info.get('industry', row.get('Industry', 'N/A')),
-                    'Market Cap': market_cap_str, # ✅ 수정된 시가총액 적용
-                    'P/E (TTM)': f"{info.get('trailingPE', 0):.2f}",
+                    'Company Name': info.get('longName', 'N/A'),
+                    'Sector': info.get('sector', 'N/A'),
+                    'Industry': info.get('industry', 'N/A'),
+                    'Market Cap': market_cap_str,
+                    'P/E (TTM)': f"{info.get('trailingPE', 0):.2f}" if info.get('trailingPE') else 'N/A',
                     'Current Price': f"${current_price:,.2f}",
                     '52-Week High': f"${high_52_week:,.2f}",
                 }
