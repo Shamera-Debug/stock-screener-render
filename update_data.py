@@ -9,39 +9,39 @@ import sys # 명령줄 인자를 받기 위해 추가
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# ✅ [수정] 국가별 필터 방식을 'exchange'와 'country'로 분리
+# ✅ [수정] 해외 국가의 market_cap 필터를 빈 문자열('')로 변경
 COUNTRY_CONFIG = {
     'us': {
         'name': '미국 (USA)',
-        'filter_type': 'exchange', # 미국은 거래소로 필터링
+        'filter_type': 'exchange',
         'filter_value': ['NASDAQ', 'NYSE'],
-        'market_cap': '+Large (over $10bln)',
+        'market_cap': '+Large (over $10bln)', # 미국은 기준 유지
         'currency_symbol': '$'
     },
     'jp': {
         'name': '일본 (Japan)',
-        'filter_type': 'country', # 그 외 국가는 국가명으로 필터링
+        'filter_type': 'country',
         'filter_value': 'Japan',
-        'market_cap': '+Mid (over $2bln)',
+        'market_cap': '', # 시가총액 필터 제거
         'currency_symbol': '¥'
     },
     'hk': {
         'name': '홍콩 (Hong Kong)',
         'filter_type': 'country',
         'filter_value': 'Hong Kong',
-        'market_cap': '+Mid (over $2bln)',
+        'market_cap': '', # 시가총액 필터 제거
         'currency_symbol': 'HK$'
     },
     'kr': {
         'name': '한국 (Korea)',
         'filter_type': 'country',
         'filter_value': 'South Korea',
-        'market_cap': '+Mid (over $2bln)',
+        'market_cap': '', # 시가총액 필터 제거
         'currency_symbol': '₩'
     }
 }
 
-# ✅ [수정] 필터 타입(exchange/country)에 따라 동적으로 필터링하도록 함수 로직 변경
+# ✅ [수정] market_cap 필터가 있을 때만 적용하도록 로직 변경
 def get_stocks_by_country(country_config):
     country_name = country_config['name']
     filter_type = country_config['filter_type']
@@ -50,7 +50,6 @@ def get_stocks_by_country(country_config):
     
     logging.info(f"finvizfinance 스크리너를 통해 {country_name} 기업 정보를 불러오는 중...")
 
-    # filter_value가 리스트가 아니면 리스트로 감싸서 동일 로직 사용
     if not isinstance(filter_value, list):
         filter_value = [filter_value]
 
@@ -60,11 +59,15 @@ def get_stocks_by_country(country_config):
             logging.info(f"필터링 기준 '{value}' 스크리닝 중...")
             foverview = Overview()
             
-            # 필터 타입에 따라 다른 필터 딕셔너리 생성
+            # 기본 필터 설정
             if filter_type == 'exchange':
-                filters_dict = {'Exchange': value, 'Market Cap.': market_cap_filter}
+                filters_dict = {'Exchange': value}
             else: # 'country'
-                filters_dict = {'Country': value, 'Market Cap.': market_cap_filter}
+                filters_dict = {'Country': value}
+            
+            # market_cap 필터 값이 있을 경우에만 추가
+            if market_cap_filter:
+                filters_dict['Market Cap.'] = market_cap_filter
             
             foverview.set_filter(filters_dict=filters_dict)
             df = foverview.screener_view(order='Market Cap.', ascend=False)
@@ -147,6 +150,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
