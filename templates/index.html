@@ -4,89 +4,18 @@
     <meta charset="UTF-8">
     <title>글로벌 52주 신고가 근접 종목</title>
     <style>
-/* --- 전체 레이아웃 --- */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            margin: 0;
-            background-color: #f4f6f8;
-            color: #333;
-            transition: margin-left 0.3s ease-in-out; /* ✅ [추가] 부드러운 전환 효과 */
-        }
-        
-        /* --- 사이드바 스타일 --- */
-        .sidebar {
-            width: 220px;
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background-color: #1a222c;
-            padding-top: 60px; /* 메뉴 버튼을 위한 공간 확보 */
-            color: #fff;
-            transition: transform 0.3s ease-in-out; /* ✅ [추가] 부드러운 숨김/표시 효과 */
-            z-index: 100;
-        }
-        /* ✅ [추가] 사이드바가 숨겨졌을 때의 스타일 */
-        .sidebar.hidden {
-            transform: translateX(-100%);
-        }
-        .sidebar h2 {
-            text-align: center;
-            color: #00aaff;
-            margin-bottom: 30px;
-        }
-        .sidebar ul {
-            list-style-type: none;
-            padding: 0;
-            margin: 0;
-        }
-        .sidebar ul li a {
-            display: block;
-            color: #adb5bd;
-            text-decoration: none;
-            padding: 15px 25px;
-            transition: background-color 0.2s, color 0.2s;
-        }
-        .sidebar ul li a:hover, .sidebar ul li a.active {
-            background-color: #00aaff;
-            color: #ffffff;
-        }
-
-        /* ✅ [추가] 메뉴 토글 버튼 스타일 */
-        #menu-toggle {
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            z-index: 101;
-            background: none;
-            border: none;
-            color: #00aaff;
-            font-size: 24px;
-            cursor: pointer;
-        }
-
-        /* --- 메인 콘텐츠 영역 스타일 --- */
-        .content {
-            padding: 2em;
-            transition: margin-left 0.3s ease-in-out; /* ✅ [추가] 부드러운 전환 효과 */
-            margin-left: 220px; /* ✅ [수정] 자바스크립트로 제어 */
-        }
-        /* ✅ [추가] 사이드바 숨겨졌을 때 콘텐츠가 전체 너비를 차지하도록 */
-        .content.full-width {
-            margin-left: 0;
-        }
-        .container {
-            max-width: 100%; /* ✅ [수정] 너비 제한을 풀어 가로 스크롤 최소화 */
-            margin: auto;
-            overflow-x: auto;
-        }
-        h1 {
-            text-align: center;
-            color: #007bff;
-            margin-bottom: 1.5em;
-        }
-
-        /* --- 테이블 스타일 (기존과 동일) --- */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background-color: #f4f6f8; color: #333; }
+        .sidebar { width: 220px; height: 100vh; position: fixed; top: 0; left: 0; background-color: #1a222c; padding-top: 60px; color: #fff; transition: transform 0.3s ease-in-out; z-index: 100; }
+        .sidebar.hidden { transform: translateX(-100%); }
+        .sidebar h2 { text-align: center; color: #00aaff; margin-bottom: 30px; }
+        .sidebar ul { list-style-type: none; padding: 0; margin: 0; }
+        .sidebar ul li a { display: block; color: #adb5bd; text-decoration: none; padding: 15px 25px; transition: background-color 0.2s, color 0.2s; }
+        .sidebar ul li a:hover, .sidebar ul li a.active { background-color: #00aaff; color: #ffffff; }
+        #menu-toggle { position: fixed; top: 15px; left: 15px; z-index: 101; background: none; border: none; color: #00aaff; font-size: 24px; cursor: pointer; }
+        .content { padding: 2em; transition: margin-left 0.3s ease-in-out; margin-left: 220px; }
+        .content.full-width { margin-left: 0; }
+        .container { max-width: 100%; margin: auto; overflow-x: auto; }
+        h1 { text-align: center; color: #007bff; margin-bottom: 1.5em; }
         table { width: 100%; border-collapse: collapse; box-shadow: 0 2px 15px rgba(0,0,0,0.1); background-color: #fff; }
         th, td { border: 1px solid #e0e0e0; text-align: left; padding: 12px 15px; white-space: nowrap; }
         thead th { position: sticky; top: 0; z-index: 10; background-color: #007bff; color: #ffffff; font-weight: 600; }
@@ -99,11 +28,7 @@
         <h2>🚀 Stock Screener</h2>
         <ul>
             {% for code, config in countries %}
-            <li>
-                <a href="/{{ code }}" class="{{ 'active' if code == active_country_code else '' }}">
-                    {{ config['name'] }}
-                </a>
-            </li>
+            <li><a href="/{{ code }}" class="{{ 'active' if code == active_country_code else '' }}">{{ config['name'] }}</a></li>
             {% endfor %}
         </ul>
     </nav>
@@ -112,36 +37,20 @@
 
     <main class="content" id="main-content">
         <div class="container">
-            <h1>📈 52주 신고가 근접 종목 (미국)</h1>
+            <h1>📈 52주 신고가 근접 종목 ({{ country_name }})</h1>
             <table>
                 <thead>
                     <tr>
-                        <th>티커</th>
-                        <th>회사 이름</th>
-                        <th>섹터</th>
-                        <th>산업</th>
-                        <th>시가총액</th>
-                        <th>P/E</th>
-                        <th>현재가</th>
-                        <th>52주 신고가</th>
+                        <th>티커</th><th>회사 이름</th><th>섹터</th><th>산업</th><th>시가총액</th><th>P/E</th><th>현재가</th><th>52주 신고가</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for stock in stocks %}
                     <tr>
-                        <td>{{ stock['Ticker'] }}</td>
-                        <td>{{ stock['Company Name'] }}</td>
-                        <td>{{ stock['Sector'] }}</td>
-                        <td>{{ stock['Industry'] }}</td>
-                        <td>{{ stock['Market Cap'] }}</td>
-                        <td>{{ stock['P/E (TTM)'] }}</td>
-                        <td>{{ stock['Current Price'] }}</td>
-                        <td>{{ stock['52-Week High'] }}</td>
+                        <td>{{ stock['Ticker'] }}</td><td>{{ stock['Company Name'] }}</td><td>{{ stock['Sector'] }}</td><td>{{ stock['Industry'] }}</td><td>{{ stock['Market Cap'] }}</td><td>{{ stock['P/E (TTM)'] }}</td><td>{{ stock['Current Price'] }}</td><td>{{ stock['52-Week High'] }}</td>
                     </tr>
                     {% else %}
-                    <tr>
-                        <td colspan="8" style="text-align: center; padding: 20px;">조건에 맞는 종목을 찾지 못했거나, 데이터가 아직 준비되지 않았습니다.</td>
-                    </tr>
+                    <tr><td colspan="8" style="text-align: center; padding: 20px;">조건에 맞는 종목을 찾지 못했거나, 데이터가 아직 준비되지 않았습니다.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -149,20 +58,13 @@
     </main>
 
     <script>
-        // HTML 요소들을 가져옵니다.
         const menuToggle = document.getElementById('menu-toggle');
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.getElementById('main-content');
-
-        // 메뉴 버튼에 클릭 이벤트를 추가합니다.
         menuToggle.addEventListener('click', () => {
-            // 사이드바와 메인 콘텐츠에 특정 클래스를 추가하거나 제거합니다.
             sidebar.classList.toggle('hidden');
             mainContent.classList.toggle('full-width');
         });
     </script>
-
 </body>
 </html>
-
-
