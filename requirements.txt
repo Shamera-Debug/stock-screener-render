@@ -6,4 +6,5 @@ finvizfinance
 pykrx
 openpyxl
 requests
-
+beautifulsoup4
+lxml
