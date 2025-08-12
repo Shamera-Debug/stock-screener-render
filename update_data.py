@@ -65,7 +65,7 @@ def get_stocks_by_country(country_code, config):
         elif country_code in ['jp', 'hk']:
             # ✅ [수정] EODHD의 공식 거래소 코드로 변경
             exchange_code_map = {
-                'jp': 'TYO', # Tokyo Stock Exchange
+                'jp': 'T', # Tokyo Stock Exchange
                 'hk': 'HK'   # Hong Kong Stock Exchange
             }
             exchange_code = exchange_code_map[country_code]
@@ -171,6 +171,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
