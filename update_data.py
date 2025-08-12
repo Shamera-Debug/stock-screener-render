@@ -9,63 +9,71 @@ import sys # 명령줄 인자를 받기 위해 추가
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# ✅ [수정] 미국('us')의 거래소 설정을 리스트로 변경
+# ✅ [수정] 국가별 필터 방식을 'exchange'와 'country'로 분리
 COUNTRY_CONFIG = {
     'us': {
         'name': '미국 (USA)',
-        'finviz_exchange': ['NASDAQ', 'NYSE'], # 나스닥과 뉴욕증권거래소 모두 포함
-        'finviz_market_cap': '+Large (over $10bln)',
+        'filter_type': 'exchange', # 미국은 거래소로 필터링
+        'filter_value': ['NASDAQ', 'NYSE'],
+        'market_cap': '+Large (over $10bln)',
         'currency_symbol': '$'
     },
     'jp': {
         'name': '일본 (Japan)',
-        'finviz_exchange': 'Japan',
-        'finviz_market_cap': '+Mid (over $2bln)',
+        'filter_type': 'country', # 그 외 국가는 국가명으로 필터링
+        'filter_value': 'Japan',
+        'market_cap': '+Mid (over $2bln)',
         'currency_symbol': '¥'
     },
     'hk': {
         'name': '홍콩 (Hong Kong)',
-        'finviz_exchange': 'Hong Kong',
-        'finviz_market_cap': '+Mid (over $2bln)',
+        'filter_type': 'country',
+        'filter_value': 'Hong Kong',
+        'market_cap': '+Mid (over $2bln)',
         'currency_symbol': 'HK$'
     },
     'kr': {
         'name': '한국 (Korea)',
-        'finviz_exchange': 'South Korea',
-        'finviz_market_cap': '+Mid (over $2bln)',
+        'filter_type': 'country',
+        'filter_value': 'South Korea',
+        'market_cap': '+Mid (over $2bln)',
         'currency_symbol': '₩'
     }
 }
 
-# ✅ [수정] 여러 거래소를 처리하도록 함수 로직 변경
+# ✅ [수정] 필터 타입(exchange/country)에 따라 동적으로 필터링하도록 함수 로직 변경
 def get_stocks_by_country(country_config):
-    exchange_list = country_config['finviz_exchange']
-    market_cap_filter = country_config['finviz_market_cap']
     country_name = country_config['name']
+    filter_type = country_config['filter_type']
+    filter_value = country_config['filter_value']
+    market_cap_filter = country_config['market_cap']
+    
     logging.info(f"finvizfinance 스크리너를 통해 {country_name} 기업 정보를 불러오는 중...")
 
-    # 만약 설정이 리스트가 아니면, 리스트로 감싸서 동일한 로직을 타도록 함
-    if not isinstance(exchange_list, list):
-        exchange_list = [exchange_list]
+    # filter_value가 리스트가 아니면 리스트로 감싸서 동일 로직 사용
+    if not isinstance(filter_value, list):
+        filter_value = [filter_value]
 
-    all_dfs = [] # 각 거래소 결과를 담을 리스트
+    all_dfs = []
     try:
-        for exchange in exchange_list:
-            logging.info(f"거래소 '{exchange}' 스크리닝 중...")
+        for value in filter_value:
+            logging.info(f"필터링 기준 '{value}' 스크리닝 중...")
             foverview = Overview()
-            filters_dict = {
-                'Exchange': exchange,
-                'Market Cap.': market_cap_filter,
-            }
+            
+            # 필터 타입에 따라 다른 필터 딕셔너리 생성
+            if filter_type == 'exchange':
+                filters_dict = {'Exchange': value, 'Market Cap.': market_cap_filter}
+            else: # 'country'
+                filters_dict = {'Country': value, 'Market Cap.': market_cap_filter}
+            
             foverview.set_filter(filters_dict=filters_dict)
             df = foverview.screener_view(order='Market Cap.', ascend=False)
             all_dfs.append(df)
-
-        # 모든 데이터프레임을 하나로 합침
+        
         combined_df = pd.concat(all_dfs, ignore_index=True)
         logging.info(f"성공! 총 {len(combined_df)}개 기업 정보를 확인합니다.")
         return combined_df
-
+        
     except Exception as e:
         logging.error(f"{country_name} 기업 목록을 불러오는 데 실패했습니다: {e}")
         return pd.DataFrame()
@@ -139,6 +147,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
