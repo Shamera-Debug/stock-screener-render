@@ -13,23 +13,27 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 COUNTRY_CONFIG = {
     'us': {
         'name': '미국 (USA)',
-        'finviz_exchange': 'USA', # Finviz에서 사용하는 국가 코드
+        'finviz_exchange': 'USA',
+        # 이 부분을 +Large (over $10bln)로 수정합니다.
+        'finviz_market_cap': '+Large (over $10bln)', 
         'currency_symbol': '$'
     },
     'jp': {
         'name': '일본 (Japan)',
         'finviz_exchange': 'Japan',
+        'finviz_market_cap': '+Mid (over $2bln)', # 일본은 그대로 유지
         'currency_symbol': '¥'
     },
     'hk': {
         'name': '홍콩 (Hong Kong)',
         'finviz_exchange': 'Hong Kong',
+        'finviz_market_cap': '+Mid (over $2bln)', # 홍콩은 그대로 유지
         'currency_symbol': 'HK$'
     },
-    # ❗️ 참고: Finviz는 한국 증시 데이터를 거의 제공하지 않아 목록이 비어있을 수 있습니다.
     'kr': {
         'name': '한국 (Korea)',
         'finviz_exchange': 'South Korea',
+        'finviz_market_cap': '+Mid (over $2bln)', # 한국은 그대로 유지
         'currency_symbol': '₩'
     }
 }
@@ -37,13 +41,14 @@ COUNTRY_CONFIG = {
 # 국가별로 필터링하는 함수로 변경
 def get_stocks_by_country(country_config):
     exchange_code = country_config['finviz_exchange']
+    market_cap_filter = country_config['finviz_market_cap'] # 새로 추가된 설정값
     country_name = country_config['name']
     logging.info(f"finvizfinance 스크리너를 통해 {country_name} 기업 정보를 불러오는 중...")
     try:
         foverview = Overview()
         filters_dict = {
             'Exchange': exchange_code,
-            'Market Cap.': '+Mid (over $2bln)',
+            'Market Cap.': market_cap_filter, # 변수로 받도록 수정
         }
         df = foverview.screener_view(order='Market Cap.', ascend=False)
         logging.info(f"성공! 총 {len(df)}개 기업 정보를 확인합니다.")
@@ -121,3 +126,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
