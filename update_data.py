@@ -6,7 +6,6 @@ import json
 import os
 import sys
 from pykrx import stock
-import hkex
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -65,12 +64,12 @@ def get_stocks_by_country(country_code, config):
             df['Ticker'] = df['Ticker'].astype(str) + '.T'
         
         elif country_code == 'hk':
-            logging.info("hkex 라이브러리에서 홍콩 증권거래소 종목 목록 가져오는 중...")
-            client = hkex.Securities()
-            market_data = client.get_files()
-            df = market_data['list_of_securities']['df']
-            df.rename(columns={'Stock Code': 'Ticker'}, inplace=True)
-            df['Ticker'] = df['Ticker'].astype(str).str.zfill(4) + '.HK'
+            # ✅ [수정] 홍콩: 문제가 된 라이브러리 대신, 위키피디아 스크래핑 방식으로 변경
+            logging.info("Wikipedia에서 홍콩 증권거래소 종목 목록 가져오는 중...")
+            url = "https://en.wikipedia.org/wiki/List_of_companies_listed_on_the_Hong_Kong_Stock_Exchange"
+            tables = pd.read_html(url, attrs={'id': 'constituents'})
+            df = tables[0]
+            df['Ticker'] = df['Ticker'].str.split(' ').str[1].str.zfill(4) + '.HK'
 
         logging.info(f"성공! 총 {len(df)}개 기업 정보를 확인합니다.")
         return df
@@ -152,3 +151,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
