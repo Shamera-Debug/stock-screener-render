@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>52주 신고가 근접 종목</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #dddddd; text-align: left; padding: 8px; }
+        thead { background-color: #f2f2f2; }
+        h1 { text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>📈 NASDAQ 52주 신고가 근접 종목</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>티커</th>
+                <th>회사 이름</th>
+                <th>섹터</th>
+                <th>산업</th>
+                <th>시가총액</th>
+                <th>P/E</th>
+                <th>현재가</th>
+                <th>52주 신고가</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stock in stocks %}
+            <tr>
+                <td>{{ stock['Ticker'] }}</td>
+                <td>{{ stock['Company Name'] }}</td>
+                <td>{{ stock['Sector'] }}</td>
+                <td>{{ stock['Industry'] }}</td>
+                <td>{{ stock['Market Cap'] }}</td>
+                <td>{{ stock['P/E (TTM)'] }}</td>
+                <td>{{ stock['Current Price'] }}</td>
+                <td>{{ stock['52-Week High'] }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8">조건에 맞는 종목을 찾지 못했습니다.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
