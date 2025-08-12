@@ -2,45 +2,81 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>52주 신고가 근접 종목</title>
+    <title>글로벌 52주 신고가 근접 종목</title>
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
-            margin: 2em; 
-            background-color: #f4f6f8; 
-            color: #333; 
+        /* --- 전체 레이아웃 --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0; /* body의 기본 margin 제거 */
+            background-color: #f4f6f8;
+            color: #333;
         }
-        .container { 
-            max-width: 1200px; 
-            margin: auto; 
-            overflow-x: auto; /* 모바일 화면에서 표가 넘칠 경우 스크롤 생성 */
+        .page-wrapper {
+            display: flex; /* 사이드바와 콘텐츠를 나란히 배치 */
         }
-        h1 { 
-            text-align: center; 
-            color: #007bff; 
-            margin-bottom: 1.5em; 
-        }
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            box-shadow: 0 2px 15px rgba(0,0,0,0.1); 
-            background-color: #fff; 
-        }
-        
-        /* --- ✅ [수정] 이 부분에 white-space 속성 추가 --- */
-        th, td { 
-            border: 1px solid #e0e0e0; 
-            text-align: left; 
-            padding: 12px 15px; 
-            white-space: nowrap; /* 줄바꿈 방지 */
-        }
-        /* ------------------------------------------ */
 
-        tbody tr:nth-of-type(even) { 
-            background-color: #f9f9f9; 
+        /* --- ✅ [추가] 사이드바 스타일 --- */
+        .sidebar {
+            width: 220px; /* 사이드바 너비 */
+            height: 100vh; /* 화면 전체 높이 */
+            position: fixed; /* 스크롤해도 제자리에 고정 */
+            top: 0;
+            left: 0;
+            background-color: #1a222c;
+            padding-top: 20px;
+            color: #fff;
         }
-        tbody tr:hover { 
-            background-color: #f1f1f1; 
+        .sidebar h2 {
+            text-align: center;
+            color: #00aaff;
+            margin-bottom: 30px;
+        }
+        .sidebar ul {
+            list-style-type: none; /* 리스트 앞의 점 제거 */
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar ul li a {
+            display: block; /* 링크 영역을 전체 너비로 */
+            color: #adb5bd;
+            text-decoration: none; /* 밑줄 제거 */
+            padding: 15px 25px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .sidebar ul li a:hover, .sidebar ul li a.active {
+            background-color: #00aaff;
+            color: #ffffff;
+        }
+
+        /* --- ✅ [수정] 메인 콘텐츠 영역 스타일 --- */
+        .content {
+            flex-grow: 1; /* 남은 공간을 모두 차지 */
+            margin-left: 220px; /* 사이드바 너비만큼 왼쪽 여백 */
+            padding: 2em;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            overflow-x: auto;
+        }
+        h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 1.5em;
+        }
+
+        /* --- 테이블 스타일 (기존과 유사) --- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            background-color: #fff;
+        }
+        th, td {
+            border: 1px solid #e0e0e0;
+            text-align: left;
+            padding: 12px 15px;
+            white-space: nowrap;
         }
         thead th {
             position: sticky;
@@ -50,43 +86,58 @@
             color: #ffffff;
             font-weight: 600;
         }
+        tbody tr:nth-of-type(even) { background-color: #f9f9f9; }
+        tbody tr:hover { background-color: #f1f1f1; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>📈 NASDAQ 52주 신고가 근접 종목</h1>
-        <table>
-            <thead>
-                <tr>
-                    <th>티커</th>
-                    <th>회사 이름</th>
-                    <th>섹터</th>
-                    <th>산업</th>
-                    <th>시가총액</th>
-                    <th>P/E</th>
-                    <th>현재가</th>
-                    <th>52주 신고가</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for stock in stocks %}
-                <tr>
-                    <td>{{ stock['Ticker'] }}</td>
-                    <td>{{ stock['Company Name'] }}</td>
-                    <td>{{ stock['Sector'] }}</td>
-                    <td>{{ stock['Industry'] }}</td>
-                    <td>{{ stock['Market Cap'] }}</td>
-                    <td>{{ stock['P/E (TTM)'] }}</td>
-                    <td>{{ stock['Current Price'] }}</td>
-                    <td>{{ stock['52-Week High'] }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="8" style="text-align: center; padding: 20px;">조건에 맞는 종목을 찾지 못했거나, 데이터가 아직 준비되지 않았습니다.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="page-wrapper">
+        <nav class="sidebar">
+            <h2>🚀 Stock Screener</h2>
+            <ul>
+                <li><a href="/" class="active">미국 (USA)</a></li>
+                <li><a href="/jp">일본 (Japan)</a></li>
+                <li><a href="/hk">홍콩 (Hong Kong)</a></li>
+            </ul>
+        </nav>
+
+        <main class="content">
+            <div class="container">
+                <h1>📈 52주 신고가 근접 종목 (미국)</h1>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>티커</th>
+                            <th>회사 이름</th>
+                            <th>섹터</th>
+                            <th>산업</th>
+                            <th>시가총액</th>
+                            <th>P/E</th>
+                            <th>현재가</th>
+                            <th>52주 신고가</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stock in stocks %}
+                        <tr>
+                            <td>{{ stock['Ticker'] }}</td>
+                            <td>{{ stock['Company Name'] }}</td>
+                            <td>{{ stock['Sector'] }}</td>
+                            <td>{{ stock['Industry'] }}</td>
+                            <td>{{ stock['Market Cap'] }}</td>
+                            <td>{{ stock['P/E (TTM)'] }}</td>
+                            <td>{{ stock['Current Price'] }}</td>
+                            <td>{{ stock['52-Week High'] }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 20px;">조건에 맞는 종목을 찾지 못했거나, 데이터가 아직 준비되지 않았습니다.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
     </div>
 </body>
 </html>
