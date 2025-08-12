@@ -13,6 +13,7 @@
         .container { 
             max-width: 1200px; 
             margin: auto; 
+            overflow-x: auto; /* 모바일 화면에서 표가 넘칠 경우 스크롤 생성 */
         }
         h1 { 
             text-align: center; 
@@ -25,35 +26,35 @@
             box-shadow: 0 2px 15px rgba(0,0,0,0.1); 
             background-color: #fff; 
         }
+        
+        /* --- ✅ [수정] 이 부분에 white-space 속성 추가 --- */
         th, td { 
             border: 1px solid #e0e0e0; 
             text-align: left; 
             padding: 12px 15px; 
+            white-space: nowrap; /* 줄바꿈 방지 */
         }
+        /* ------------------------------------------ */
+
         tbody tr:nth-of-type(even) { 
             background-color: #f9f9f9; 
         }
         tbody tr:hover { 
             background-color: #f1f1f1; 
         }
-
-        /* --- ✅ [수정] 헤더 고정을 위한 CSS 코드 --- */
         thead th {
             position: sticky;
-            top: 0; /* 화면 맨 위에 고정 */
-            z-index: 10; /* 다른 내용 위로 올라오도록 설정 */
-            
-            /* 스크롤 시에도 기존 스타일 유지 */
+            top: 0;
+            z-index: 10;
             background-color: #007bff;
             color: #ffffff;
             font-weight: 600;
         }
-        /* ------------------------------------ */
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📈 미국 신고가 근접 종목</h1>
+        <h1>📈 NASDAQ 52주 신고가 근접 종목</h1>
         <table>
             <thead>
                 <tr>
