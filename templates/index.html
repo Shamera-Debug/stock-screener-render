@@ -4,8 +4,94 @@
     <meta charset="UTF-8">
     <title>글로벌 52주 신고가 근접 종목</title>
     <style>
-        /* CSS 스타일은 이전과 동일하므로 생략합니다. */
-        /* ... 이전 답변의 CSS 코드를 여기에 붙여넣으세요 ... */
+/* --- 전체 레이아웃 --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            background-color: #f4f6f8;
+            color: #333;
+            transition: margin-left 0.3s ease-in-out; /* ✅ [추가] 부드러운 전환 효과 */
+        }
+        
+        /* --- 사이드바 스타일 --- */
+        .sidebar {
+            width: 220px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #1a222c;
+            padding-top: 60px; /* 메뉴 버튼을 위한 공간 확보 */
+            color: #fff;
+            transition: transform 0.3s ease-in-out; /* ✅ [추가] 부드러운 숨김/표시 효과 */
+            z-index: 100;
+        }
+        /* ✅ [추가] 사이드바가 숨겨졌을 때의 스타일 */
+        .sidebar.hidden {
+            transform: translateX(-100%);
+        }
+        .sidebar h2 {
+            text-align: center;
+            color: #00aaff;
+            margin-bottom: 30px;
+        }
+        .sidebar ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar ul li a {
+            display: block;
+            color: #adb5bd;
+            text-decoration: none;
+            padding: 15px 25px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .sidebar ul li a:hover, .sidebar ul li a.active {
+            background-color: #00aaff;
+            color: #ffffff;
+        }
+
+        /* ✅ [추가] 메뉴 토글 버튼 스타일 */
+        #menu-toggle {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 101;
+            background: none;
+            border: none;
+            color: #00aaff;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        /* --- 메인 콘텐츠 영역 스타일 --- */
+        .content {
+            padding: 2em;
+            transition: margin-left 0.3s ease-in-out; /* ✅ [추가] 부드러운 전환 효과 */
+            margin-left: 220px; /* ✅ [수정] 자바스크립트로 제어 */
+        }
+        /* ✅ [추가] 사이드바 숨겨졌을 때 콘텐츠가 전체 너비를 차지하도록 */
+        .content.full-width {
+            margin-left: 0;
+        }
+        .container {
+            max-width: 100%; /* ✅ [수정] 너비 제한을 풀어 가로 스크롤 최소화 */
+            margin: auto;
+            overflow-x: auto;
+        }
+        h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 1.5em;
+        }
+
+        /* --- 테이블 스타일 (기존과 동일) --- */
+        table { width: 100%; border-collapse: collapse; box-shadow: 0 2px 15px rgba(0,0,0,0.1); background-color: #fff; }
+        th, td { border: 1px solid #e0e0e0; text-align: left; padding: 12px 15px; white-space: nowrap; }
+        thead th { position: sticky; top: 0; z-index: 10; background-color: #007bff; color: #ffffff; font-weight: 600; }
+        tbody tr:nth-of-type(even) { background-color: #f9f9f9; }
+        tbody tr:hover { background-color: #f1f1f1; }
     </style>
 </head>
 <body>
@@ -39,3 +125,4 @@
     </script>
 </body>
 </html>
+
