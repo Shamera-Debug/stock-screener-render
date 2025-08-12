@@ -62,17 +62,32 @@ def find_52_week_high_stocks_from_df(stocks_df):
             if hist.empty:
                 continue
             
-            current_price = hist['Close'][-1]
+            # ✅ [수정 1] yfinance의 info 객체를 가져옵니다.
+            info = stock_yf.info
+            
+            current_price = hist['Close'].iloc[-1]
             high_52_week = hist['High'].max()
             
             if current_price >= high_52_week * 0.98:
+                # ✅ [수정 2] 시가총액을 info 객체에서 직접 가져옵니다.
+                market_cap_value = info.get('marketCap', 0)
+                # 시가총액을 읽기 쉽게 B, T 단위로 변환
+                if market_cap_value > 1_000_000_000_000:
+                    market_cap_str = f"{market_cap_value / 1_000_000_000_000:.2f}T"
+                elif market_cap_value > 1_000_000_000:
+                    market_cap_str = f"{market_cap_value / 1_000_000_000:.2f}B"
+                elif market_cap_value > 1_000_000:
+                    market_cap_str = f"{market_cap_value / 1_000_000:.2f}M"
+                else:
+                    market_cap_str = f"${market_cap_value:,}"
+
                 stock_data = {
                     'Ticker': ticker,
-                    'Company Name': row.get('Company', 'N/A'),
-                    'Sector': row.get('Sector', 'N/A'),
-                    'Industry': row.get('Industry', 'N/A'),
-                    'Market Cap': format_market_cap(row.get('Market Cap')),
-                    'P/E (TTM)': row.get('P/E', 'N/A'),
+                    'Company Name': info.get('longName', row.get('Company', 'N/A')), # info 이름이 더 정확
+                    'Sector': info.get('sector', row.get('Sector', 'N/A')),
+                    'Industry': info.get('industry', row.get('Industry', 'N/A')),
+                    'Market Cap': market_cap_str, # ✅ 수정된 시가총액 적용
+                    'P/E (TTM)': f"{info.get('trailingPE', 0):.2f}",
                     'Current Price': f"${current_price:,.2f}",
                     '52-Week High': f"${high_52_week:,.2f}",
                 }
