@@ -4,84 +4,92 @@ from finvizfinance.screener.overview import Overview
 import logging
 import json
 import os
-import sys # 명령줄 인자를 받기 위해 추가
+import sys
+from pykrx import stock
+import hkex
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# ✅ [수정] 해외 국가의 market_cap 필터를 빈 문자열('')로 변경
+# 최종 국가별 설정
 COUNTRY_CONFIG = {
     'us': {
         'name': '미국 (USA)',
-        'filter_type': 'exchange',
-        'filter_value': ['NASDAQ', 'NYSE'],
-        'market_cap': '+Large (over $10bln)', # 미국은 기준 유지
+        'market_cap_filter': '+Large (over $10bln)',
         'currency_symbol': '$'
     },
     'jp': {
         'name': '일본 (Japan)',
-        'filter_type': 'country',
-        'filter_value': 'Japan',
-        'market_cap': '', # 시가총액 필터 제거
         'currency_symbol': '¥'
     },
     'hk': {
         'name': '홍콩 (Hong Kong)',
-        'filter_type': 'country',
-        'filter_value': 'Hong Kong',
-        'market_cap': '', # 시가총액 필터 제거
         'currency_symbol': 'HK$'
     },
     'kr': {
         'name': '한국 (Korea)',
-        'filter_type': 'country',
-        'filter_value': 'South Korea',
-        'market_cap': '', # 시가총액 필터 제거
         'currency_symbol': '₩'
     }
 }
 
-# ✅ [수정] market_cap 필터가 있을 때만 적용하도록 로직 변경
-def get_stocks_by_country(country_config):
-    country_name = country_config['name']
-    filter_type = country_config['filter_type']
-    filter_value = country_config['filter_value']
-    market_cap_filter = country_config['market_cap']
-    
-    logging.info(f"finvizfinance 스크리너를 통해 {country_name} 기업 정보를 불러오는 중...")
-
-    if not isinstance(filter_value, list):
-        filter_value = [filter_value]
-
-    all_dfs = []
+def get_stocks_by_country(country_code, config):
+    country_name = config['name']
+    logging.info(f"'{country_name}'의 전체 종목 목록을 가져오는 중...")
+    df = pd.DataFrame()
     try:
-        for value in filter_value:
-            logging.info(f"필터링 기준 '{value}' 스크리닝 중...")
-            foverview = Overview()
-            
-            # 기본 필터 설정
-            if filter_type == 'exchange':
-                filters_dict = {'Exchange': value}
-            else: # 'country'
-                filters_dict = {'Country': value}
-            
-            # market_cap 필터 값이 있을 경우에만 추가
-            if market_cap_filter:
-                filters_dict['Market Cap.'] = market_cap_filter
-            
-            foverview.set_filter(filters_dict=filters_dict)
-            df = foverview.screener_view(order='Market Cap.', ascend=False)
-            all_dfs.append(df)
+        if country_code == 'us':
+            market_cap_filter = config['market_cap_filter']
+            all_dfs = []
+            for exchange in ['NASDAQ', 'NYSE']:
+                logging.info(f"거래소 '{exchange}' 스크리닝 중...")
+                foverview = Overview()
+                filters_dict = {'Exchange': exchange, 'Market Cap.': market_cap_filter}
+                foverview.set_filter(filters_dict=filters_dict)
+                exchange_df = foverview.screener_view(order='Market Cap.', ascend=False)
+                all_dfs.append(exchange_df)
+            df = pd.concat(all_dfs, ignore_index=True)
+
+        elif country_code == 'kr':
+            logging.info("pykrx를 통해 KOSPI, KOSDAQ 종목 목록 가져오는 중...")
+            kospi_tickers = stock.get_market_ticker_list(market="KOSPI")
+            kosdaq_tickers = stock.get_market_ticker_list(market="KOSDAQ")
+            all_tickers = kospi_tickers + kosdaq_tickers
+            df = pd.DataFrame(all_tickers, columns=['Ticker'])
+            df['Ticker'] = df['Ticker'].apply(lambda x: f"{x}.KS")
+
+        elif country_code == 'jp':
+            logging.info("Wikipedia에서 도쿄 증권거래소 종목 목록 가져오는 중...")
+            url = "https://en.wikipedia.org/wiki/List_of_companies_listed_on_the_Tokyo_Stock_Exchange"
+            tables = pd.read_html(url)
+            df = tables[0]
+            df['Ticker'] = df['Ticker'].astype(str) + '.T'
         
-        combined_df = pd.concat(all_dfs, ignore_index=True)
-        logging.info(f"성공! 총 {len(combined_df)}개 기업 정보를 확인합니다.")
-        return combined_df
-        
+        elif country_code == 'hk':
+            logging.info("hkex 라이브러리에서 홍콩 증권거래소 종목 목록 가져오는 중...")
+            client = hkex.Securities()
+            market_data = client.get_files()
+            df = market_data['list_of_securities']['df']
+            df.rename(columns={'Stock Code': 'Ticker'}, inplace=True)
+            df['Ticker'] = df['Ticker'].astype(str).str.zfill(4) + '.HK'
+
+        logging.info(f"성공! 총 {len(df)}개 기업 정보를 확인합니다.")
+        return df
+
     except Exception as e:
         logging.error(f"{country_name} 기업 목록을 불러오는 데 실패했습니다: {e}")
         return pd.DataFrame()
 
-# 상세 정보를 스크리닝하는 함수 (통화 기호 추가)
+def format_market_cap(value, currency):
+    if not isinstance(value, (int, float)) or value <= 0:
+        return "N/A"
+    if value >= 1_000_000_000_000:
+        return f"{currency}{value / 1_000_000_000_000:.2f}T"
+    if value >= 1_000_000_000:
+        return f"{currency}{value / 1_000_000_000:.2f}B"
+    if value >= 1_000_000:
+        return f"{currency}{value / 1_000_000:.2f}M"
+    return f"{currency}{value:,}"
+
 def find_52_week_high_stocks_from_df(stocks_df, country_config):
     if stocks_df.empty:
         return []
@@ -97,22 +105,20 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
             info = stock_yf.info
             hist = stock_yf.history(period="1y", interval="1d")
 
-            if hist.empty or 'regularMarketPrice' not in info or 'fiftyTwoWeekHigh' not in info:
-                continue
+            if hist.empty: continue
+            
+            current_price = info.get('regularMarketPrice', hist['Close'].iloc[-1])
+            high_52_week = info.get('fiftyTwoWeekHigh', hist['High'].max())
 
-            current_price = info['regularMarketPrice']
-            high_52_week = info['fiftyTwoWeekHigh']
+            if not current_price or not high_52_week: continue
 
             if current_price >= high_52_week * 0.98:
-                market_cap_value = info.get('marketCap', 0)
-                market_cap_str = f"{currency}{market_cap_value:,}"
-
                 stock_data = {
                     'Ticker': ticker,
                     'Company Name': info.get('longName', 'N/A'),
                     'Sector': info.get('sector', 'N/A'),
                     'Industry': info.get('industry', 'N/A'),
-                    'Market Cap': market_cap_str,
+                    'Market Cap': format_market_cap(info.get('marketCap', 0), currency),
                     'P/E (TTM)': f"{info.get('trailingPE', 0):.2f}" if info.get('trailingPE') else 'N/A',
                     'Current Price': f"{currency}{current_price:,.2f}",
                     '52-Week High': f"{currency}{high_52_week:,.2f}",
@@ -125,33 +131,24 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
     logging.info("스크리닝 완료!")
     return high_stocks
 
-# ✅ [수정] 메인 함수: 명령줄 인자를 받아 처리
 def main():
-    # python update_data.py us 와 같이 실행하면 'us'를 인자로 받음
     if len(sys.argv) < 2 or sys.argv[1] not in COUNTRY_CONFIG:
-        print("Error: Please provide a valid country code.")
+        print(f"Error: Usage: python {sys.argv[0]} <country_code>")
         print(f"Available codes: {list(COUNTRY_CONFIG.keys())}")
         return
 
     country_code = sys.argv[1]
     config = COUNTRY_CONFIG[country_code]
-    output_filename = f"{country_code}_stocks.json" # 국가별 파일 이름 생성
+    output_filename = f"{country_code}_stocks.json"
 
     logging.info(f"[{config['name']}] 데이터 업데이트 작업을 시작합니다.")
-    
-    all_stocks_df = get_stocks_by_country(config)
+    all_stocks_df = get_stocks_by_country(country_code, config)
     found_stocks = find_52_week_high_stocks_from_df(all_stocks_df, config)
     
     with open(output_filename, 'w', encoding='utf-8') as f:
         json.dump(found_stocks, f, ensure_ascii=False, indent=4)
         
     logging.info(f"총 {len(found_stocks)}개의 종목 정보를 {output_filename} 파일에 저장했습니다.")
-    logging.info("데이터 업데이트 작업을 완료했습니다.")
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
