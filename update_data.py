@@ -35,7 +35,7 @@ COUNTRY_CONFIG = {
 
 
 # ✅ [API 키] 발급받은 EODHD API 키를 여기에 입력하세요.
-EODHD_API_KEY = " 689b3c81d03518.86648196" 
+EODHD_API_KEY = "689b3c81d03518.86648196" 
 
 def get_stocks_by_country(country_code, config):
     country_name = config['name']
@@ -164,5 +164,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
