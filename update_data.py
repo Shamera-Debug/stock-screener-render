@@ -63,16 +63,17 @@ def get_stocks_by_country(country_code, config):
             df['Ticker'] = df['Ticker'].apply(lambda x: f"{x}.KS")
 
         elif country_code in ['jp', 'hk']:
-            # ✅ [대규모 수정] 일본, 홍콩: EODHD API 사용
+            # ✅ [수정] EODHD의 공식 거래소 코드로 변경
             exchange_code_map = {
-                'jp': 'TSE', # Tokyo Stock Exchange
-                'hk': 'HKEX' # Hong Kong Stock Exchange
+                'jp': 'TYO', # Tokyo Stock Exchange
+                'hk': 'HK'   # Hong Kong Stock Exchange
             }
             exchange_code = exchange_code_map[country_code]
-            
+
             logging.info(f"EODHD API를 통해 {exchange_code} 종목 목록 가져오는 중...")
-            
+
             api_url = f"https://eodhistoricaldata.com/api/exchange-symbol-list/{exchange_code}?api_token={EODHD_API_KEY}&fmt=json"
+
             response = requests.get(api_url)
             # --- ✅ [디버깅 코드 추가] ---
             # 서버가 보낸 실제 응답 내용을 그대로 출력해 봅니다.
@@ -170,6 +171,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
