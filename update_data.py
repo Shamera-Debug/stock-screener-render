@@ -41,15 +41,18 @@ COUNTRY_CONFIG = {
 # 국가별로 필터링하는 함수로 변경
 def get_stocks_by_country(country_config):
     exchange_code = country_config['finviz_exchange']
-    market_cap_filter = country_config['finviz_market_cap'] # 새로 추가된 설정값
+    market_cap_filter = country_config['finviz_market_cap']
     country_name = country_config['name']
     logging.info(f"finvizfinance 스크리너를 통해 {country_name} 기업 정보를 불러오는 중...")
     try:
         foverview = Overview()
         filters_dict = {
             'Exchange': exchange_code,
-            'Market Cap.': market_cap_filter, # 변수로 받도록 수정
+            'Market Cap.': market_cap_filter,
         }
+        # ✅ [수정] 누락되었던 필터 적용 라인 추가!
+        foverview.set_filter(filters_dict=filters_dict)
+
         df = foverview.screener_view(order='Market Cap.', ascend=False)
         logging.info(f"성공! 총 {len(df)}개 기업 정보를 확인합니다.")
         return df
@@ -126,4 +129,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
