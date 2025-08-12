@@ -5,5 +5,5 @@ pandas
 finvizfinance
 pykrx
 openpyxl
-html5lib
+requests
 
