@@ -112,17 +112,57 @@
 
     <main class="content" id="main-content">
         <div class="container">
-            <h1>📈 52주 신고가 근접 종목 ({{ country_name }})</h1>
+            <h1>📈 52주 신고가 근접 종목 (미국)</h1>
             <table>
-                ...
+                <thead>
+                    <tr>
+                        <th>티커</th>
+                        <th>회사 이름</th>
+                        <th>섹터</th>
+                        <th>산업</th>
+                        <th>시가총액</th>
+                        <th>P/E</th>
+                        <th>현재가</th>
+                        <th>52주 신고가</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stock in stocks %}
+                    <tr>
+                        <td>{{ stock['Ticker'] }}</td>
+                        <td>{{ stock['Company Name'] }}</td>
+                        <td>{{ stock['Sector'] }}</td>
+                        <td>{{ stock['Industry'] }}</td>
+                        <td>{{ stock['Market Cap'] }}</td>
+                        <td>{{ stock['P/E (TTM)'] }}</td>
+                        <td>{{ stock['Current Price'] }}</td>
+                        <td>{{ stock['52-Week High'] }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 20px;">조건에 맞는 종목을 찾지 못했거나, 데이터가 아직 준비되지 않았습니다.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
             </table>
         </div>
     </main>
-    
+
     <script>
-        // 자바스크립트는 이전과 동일
-        // ... 이전 답변의 script 코드를 여기에 붙여넣으세요 ...
+        // HTML 요소들을 가져옵니다.
+        const menuToggle = document.getElementById('menu-toggle');
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('main-content');
+
+        // 메뉴 버튼에 클릭 이벤트를 추가합니다.
+        menuToggle.addEventListener('click', () => {
+            // 사이드바와 메인 콘텐츠에 특정 클래스를 추가하거나 제거합니다.
+            sidebar.classList.toggle('hidden');
+            mainContent.classList.toggle('full-width');
+        });
     </script>
+
 </body>
 </html>
+
 
