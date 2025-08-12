@@ -5,10 +5,12 @@ import logging
 import json
 import os
 import sys
+import requests # ✅ [추가] API 요청을 위한 requests 라이브러리
 from pykrx import stock
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 # 최종 국가별 설정
 COUNTRY_CONFIG = {
@@ -30,6 +32,10 @@ COUNTRY_CONFIG = {
         'currency_symbol': '₩'
     }
 }
+
+
+# ✅ [API 키] 발급받은 EODHD API 키를 여기에 입력하세요.
+EODHD_API_KEY = " 689b3c81d03518.86648196" 
 
 def get_stocks_by_country(country_code, config):
     country_name = config['name']
@@ -56,20 +62,27 @@ def get_stocks_by_country(country_code, config):
             df = pd.DataFrame(all_tickers, columns=['Ticker'])
             df['Ticker'] = df['Ticker'].apply(lambda x: f"{x}.KS")
 
-        elif country_code == 'jp':
-            logging.info("Wikipedia에서 도쿄 증권거래소 종목 목록 가져오는 중...")
-            url = "https://en.wikipedia.org/wiki/List_of_companies_listed_on_the_Tokyo_Stock_Exchange"
-            tables = pd.read_html(url)
-            df = tables[0]
-            df['Ticker'] = df['Ticker'].astype(str) + '.T'
-        
-        elif country_code == 'hk':
-            # ✅ [수정] 홍콩: 문제가 된 라이브러리 대신, 위키피디아 스크래핑 방식으로 변경
-            logging.info("Wikipedia에서 홍콩 증권거래소 종목 목록 가져오는 중...")
-            url = "https://en.wikipedia.org/wiki/List_of_companies_listed_on_the_Hong_Kong_Stock_Exchange"
-            tables = pd.read_html(url, attrs={'id': 'constituents'})
-            df = tables[0]
-            df['Ticker'] = df['Ticker'].str.split(' ').str[1].str.zfill(4) + '.HK'
+        elif country_code in ['jp', 'hk']:
+            # ✅ [대규모 수정] 일본, 홍콩: EODHD API 사용
+            exchange_code_map = {
+                'jp': 'TSE', # Tokyo Stock Exchange
+                'hk': 'HKEX' # Hong Kong Stock Exchange
+            }
+            exchange_code = exchange_code_map[country_code]
+            
+            logging.info(f"EODHD API를 통해 {exchange_code} 종목 목록 가져오는 중...")
+            
+            api_url = f"https://eodhistoricaldata.com/api/exchange-symbol-list/{exchange_code}?api_token={EODHD_API_KEY}&fmt=json"
+            response = requests.get(api_url)
+            data = response.json()
+            
+            df = pd.DataFrame(data)
+            df.rename(columns={'Code': 'Ticker'}, inplace=True)
+            # yfinance가 인식하도록 Ticker 포맷 변경 (예: 7203 -> 7203.T)
+            if country_code == 'jp':
+                df['Ticker'] = df['Ticker'] + '.T'
+            elif country_code == 'hk':
+                df['Ticker'] = df['Ticker'] + '.HK'
 
         logging.info(f"성공! 총 {len(df)}개 기업 정보를 확인합니다.")
         return df
@@ -151,4 +164,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
