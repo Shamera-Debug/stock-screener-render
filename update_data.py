@@ -74,6 +74,12 @@ def get_stocks_by_country(country_code, config):
             
             api_url = f"https://eodhistoricaldata.com/api/exchange-symbol-list/{exchange_code}?api_token={EODHD_API_KEY}&fmt=json"
             response = requests.get(api_url)
+            # --- ✅ [디버깅 코드 추가] ---
+            # 서버가 보낸 실제 응답 내용을 그대로 출력해 봅니다.
+            logging.info("===== EODHD API 응답 원본 =====")
+            logging.info(response.text)
+            logging.info("==============================")
+            # ---------------------------
             data = response.json()
             
             df = pd.DataFrame(data)
@@ -164,6 +170,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
