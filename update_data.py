@@ -113,6 +113,7 @@ def get_stocks_by_country(country_code, config):
         market_caps = []
         for ticker in df['Ticker']:
             try:
+                logging.info(f"--> 시총 조회: [{index+1:04d}/{total_stocks}] {ticker}")
                 info = yf.Ticker(ticker).info
                 market_caps.append({'Ticker': ticker, 'MarketCap': info.get('marketCap', 0)})
             except Exception:
@@ -202,6 +203,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
