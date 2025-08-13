@@ -42,6 +42,10 @@ def get_filtered_stocks(country_code, config):
             if not symbols_list:
                 raise ValueError(f"OpenBB에서 '{country}'의 Ticker 목록을 찾을 수 없습니다.")
 
+            # ✅ [테스트용 코드] 전체 목록 중 앞 50개만 잘라서 사용합니다.
+            logging.info(f"--- 테스트 모드: {len(symbols_list)}개 중 50개만 사용합니다. ---")
+            symbols_list = symbols_list[:50]
+            
             # --- 분할 처리 시작 ---
             chunk_size = 500 # 한 번에 처리할 종목 수
             all_quotes = []
@@ -138,4 +142,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
