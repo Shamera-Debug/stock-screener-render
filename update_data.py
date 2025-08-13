@@ -70,6 +70,7 @@ def get_stocks_by_country(country_code, config):
             kosdaq = stock.get_market_ticker_list(market="KOSDAQ")
             df['Ticker'] = [f"{ticker}.KS" for ticker in kospi] + [f"{ticker}.KQ" for ticker in kosdaq]
 
+        # 파일: update_data.py 내 get_stocks_by_country 함수
         elif country_code == 'jp':
             logging.info("일본거래소(JPX) 웹사이트에서 최신 엑셀 파일 링크 찾는 중...")
     
@@ -86,14 +87,14 @@ def get_stocks_by_country(country_code, config):
             file_url = "https://www.jpx.co.jp" + excel_link['href']
             logging.info(f"엑셀 파일 다운로드 링크 찾음: {file_url}")
     
-            df_jpx = pd.read_excel(file_url, header=1)
+            # ✅ [디버깅 코드] 엑셀 파일을 헤더 없이 그대로 읽어서 처음 5줄을 출력합니다.
+            df_jpx = pd.read_excel(file_url, header=None)
+            print("===== JPX 엑셀 파일 원본 데이터 (처음 5줄) =====")
+            print(df_jpx.head())
+            print("==============================================")
     
-            # ✅ [최종 수정] 모든 컬럼 이름의 앞뒤 공백을 자동으로 제거합니다.
-            df_jpx.columns = df_jpx.columns.str.strip()
-    
+            # 일단 아래 코드는 임시로 에러가 나지 않도록 처리
             df = pd.DataFrame()
-            # 이제 'Local Code' 컬럼이 정확히 일치하게 됩니다.
-            df['Ticker'] = df_jpx['Local Code'].astype(str) + '.T'
 
         elif country_code == 'hk':
             # 홍콩: 위키피디아 스크래핑 (기존과 동일)
@@ -197,6 +198,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
