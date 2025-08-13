@@ -93,7 +93,7 @@ def get_stocks_by_country(country_code, config):
             # 3단계: 찾아낸 링크로 엑셀 파일 읽기
             df_jpx = pd.read_excel(file_url, header=1)
             df = pd.DataFrame()
-            df['Ticker'] = df_jpx['Code'].astype(str) + '.T'
+            df['Ticker'] = df_jpx['Securities Code'].astype(str) + '.T'
 
         elif country_code == 'hk':
             # 홍콩: 위키피디아 스크래핑 (기존과 동일)
@@ -197,6 +197,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
