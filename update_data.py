@@ -46,26 +46,36 @@ def get_filtered_stocks(country_code, config):
     
     try:
         if country_code == 'us':
-            # 미국: Finviz의 강력한 필터링 기능 유지
+            # 미국: Finviz 사용 (기존과 동일)
             logging.info(f"finvizfinance를 통해 '{config['market_cap_filter']}' 기준 스크리닝 중...")
             foverview = Overview()
             filters_dict = {'Exchange': ['NASDAQ', 'NYSE'], 'Market Cap.': config['market_cap_filter']}
             foverview.set_filter(filters_dict=filters_dict)
             df = foverview.screener_view(order='Market Cap.', ascend=False)
         else:
-            # ✅ [핵심] 그 외 모든 국가는 OpenBB 스크리너 사용
+            # ✅ [최종 수정] 그 외 모든 국가는 OpenBB의 2단계 조합 방식 사용
             country = config['openbb_country']
             top_n = config.get('top_n', 1500)
-            logging.info(f"OpenBB를 통해 '{country}'의 시가총액 상위 {top_n}개 종목 스크리닝 중...")
             
-            # OpenBB 스크리너로 시가총액 높은 순으로 정렬된 목록을 가져옴
-            obb_df = obb.equity.screener(provider="yfinance", country=country, sort="market_cap", order="desc").to_df()
+            # 1단계: 해당 국가의 전체 Ticker 목록 가져오기
+            logging.info(f"OpenBB: '{country}'의 전체 Ticker 목록 가져오는 중...")
+            all_symbols_df = obb.equity.search(country=country).to_df()
+            symbols_list = all_symbols_df['symbol'].tolist()
             
-            # 상위 N개만 선택
-            df = obb_df.head(top_n)
+            if not symbols_list:
+                raise ValueError(f"OpenBB에서 '{country}'의 Ticker 목록을 찾을 수 없습니다.")
+
+            # 2단계: 전체 Ticker의 펀더멘털(시가총액 포함) 정보를 일괄 조회
+            logging.info(f"OpenBB: 총 {len(symbols_list)}개 Ticker의 펀더멘털 정보 조회 중 (시간 소요)...")
+            fundamentals_df = obb.equity.fundamental.metrics(symbol=symbols_list, provider="yfinance").to_df()
+            
+            # 3단계: 시가총액(market_cap) 기준으로 상위 N개 필터링
+            df_filtered = fundamentals_df.sort_values(by='market_cap', ascending=False).head(top_n)
+            
             # yfinance에서 사용할 Ticker 컬럼 생성
-            df['Ticker'] = df['symbol'] + config['yfinance_suffix']
-            
+            df = df_filtered.copy() # SettingWithCopyWarning 방지
+            df['Ticker'] = df.index + config['yfinance_suffix']
+
     except Exception as e:
         logging.error(f"{country_name} 기업 목록을 불러오는 데 실패했습니다: {e}")
         return pd.DataFrame()
@@ -139,3 +149,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
