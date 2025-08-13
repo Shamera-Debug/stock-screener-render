@@ -69,8 +69,7 @@ def get_stocks_by_country(country_code, config):
             kospi = stock.get_market_ticker_list(market="KOSPI")
             kosdaq = stock.get_market_ticker_list(market="KOSDAQ")
             df['Ticker'] = [f"{ticker}.KS" for ticker in kospi] + [f"{ticker}.KQ" for ticker in kosdaq]
-
-        # 파일: update_data.py 내 get_stocks_by_country 함수
+    
         elif country_code == 'jp':
             logging.info("일본거래소(JPX) 웹사이트에서 최신 엑셀 파일 링크 찾는 중...")
     
@@ -87,14 +86,18 @@ def get_stocks_by_country(country_code, config):
             file_url = "https://www.jpx.co.jp" + excel_link['href']
             logging.info(f"엑셀 파일 다운로드 링크 찾음: {file_url}")
     
-            # ✅ [디버깅 코드] 엑셀 파일을 헤더 없이 그대로 읽어서 처음 5줄을 출력합니다.
-            df_jpx = pd.read_excel(file_url, header=None)
-            print("===== JPX 엑셀 파일 원본 데이터 (처음 5줄) =====")
-            print(df_jpx.head())
-            print("==============================================")
+            # ✅ [최종 수정 1] 헤더 위치를 정확히 지정 (header=0)
+            df_jpx = pd.read_excel(file_url, header=0)
     
-            # 일단 아래 코드는 임시로 에러가 나지 않도록 처리
+            # ✅ [최종 수정 2] 컬럼 이름의 공백 제거 (안정성 강화)
+            df_jpx.columns = df_jpx.columns.str.strip()
+    
+            # ✅ [최종 수정 3] 펀드(ETF/ETN) 등을 제외하고 순수 주식만 필터링
+            df_filtered = df_jpx[~df_jpx['Section/Products'].str.contains('ETFs/ ETNs|REITs/ Pro Market|JDRs', na=False)]
+    
             df = pd.DataFrame()
+            # ✅ [최종 수정 4] 올바른 컬럼 이름('Local Code') 사용
+            df['Ticker'] = df_filtered['Local Code'].astype(str) + '.T'
 
         elif country_code == 'hk':
             # 홍콩: 위키피디아 스크래핑 (기존과 동일)
@@ -198,6 +201,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
