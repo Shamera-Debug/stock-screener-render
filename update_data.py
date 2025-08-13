@@ -5,79 +5,85 @@ import logging
 import json
 import os
 import sys
-import investpy # ✅ [핵심] investpy 라이브러리 추가
+from pykrx import stock
+import requests
+from bs4 import BeautifulSoup
+import openpyxl
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # 최종 국가별 설정
 COUNTRY_CONFIG = {
-    'us': {
-        'name': '미국 (USA)',
-        'investpy_country': 'united states',
-        'market_cap_filter': '+Large (over $10bln)',
-        'currency_symbol': '$'
-    },
-    'jp': {
-        'name': '일본 (Japan)',
-        'investpy_country': 'japan',
-        'currency_symbol': '¥',
-        'top_n': 1500
-    },
-    'hk': {
-        'name': '홍콩 (Hong Kong)',
-        'investpy_country': 'hong kong',
-        'currency_symbol': 'HK$',
-        'top_n': 1500
-    },
-    'kr': {
-        'name': '한국 (Korea)',
-        'investpy_country': 'south korea',
-        'currency_symbol': '₩',
-        'top_n': 1500
-    }
+    'us': { 'name': '미국 (USA)', 'market_cap_filter': '+Large (over $10bln)', 'currency_symbol': '$' },
+    'jp': { 'name': '일본 (Japan)', 'currency_symbol': '¥' },
+    'hk': { 'name': '홍콩 (Hong Kong)', 'currency_symbol': 'HK$' },
+    'kr': { 'name': '한국 (Korea)', 'currency_symbol': '₩' }
 }
 
-def get_filtered_stocks(country_code, config):
+def get_stocks_by_country(country_code, config):
     country_name = config['name']
-    logging.info(f"'{country_name}'의 종목 목록을 가져오는 중...")
-    
+    logging.info(f"'{country_name}'의 전체 종목 목록을 가져오는 중...")
+    df = pd.DataFrame()
     try:
         if country_code == 'us':
-            # 미국: Finviz의 강력한 필터링 기능 유지
-            logging.info(f"finvizfinance를 통해 '{config['market_cap_filter']}' 기준 스크리닝 중...")
-            foverview = Overview()
-            filters_dict = {'Exchange': ['NASDAQ', 'NYSE'], 'Market Cap.': config['market_cap_filter']}
-            foverview.set_filter(filters_dict=filters_dict)
-            df = foverview.screener_view(order='Market Cap.', ascend=False)
-        else:
-            # ✅ [핵심] 그 외 모든 국가는 investpy로 시총 상위 1500개 필터링
-            country = config['investpy_country']
-            top_n = config.get('top_n', 1500)
-            logging.info(f"investpy를 통해 '{country}'의 시가총액 상위 {top_n}개 종목 가져오는 중...")
-            
-            # investpy로 국가의 모든 주식 정보를 가져옴 (시가총액 포함)
-            all_stocks_df = investpy.get_stocks(country=country)
+            # 미국: Finviz로 시가총액 필터링 (가장 효율적)
+            market_cap_filter = config['market_cap_filter']
+            all_dfs = []
+            for exchange in ['NASDAQ', 'NYSE']:
+                logging.info(f"거래소 '{exchange}' 스크리닝 중...")
+                foverview = Overview()
+                filters_dict = {'Exchange': exchange, 'Market Cap.': market_cap_filter}
+                foverview.set_filter(filters_dict=filters_dict)
+                exchange_df = foverview.screener_view(order='Market Cap.', ascend=False)
+                all_dfs.append(exchange_df)
+            df = pd.concat(all_dfs, ignore_index=True)
 
-            # --- ✅ [디버깅 코드 추가] ---
-            # investpy가 반환한 실제 컬럼 목록을 확인합니다.
-            print("===== investpy가 반환한 실제 컬럼 목록 =====")
-            print(all_stocks_df.columns.tolist())
-            print("==========================================")
-            # ------------------------------------
-            
-            # 시가총액(market_cap)이 높은 순으로 정렬 후 상위 N개 선택
-            # market_cap 단위는 백만(million)이므로 큰 숫자가 위로 오도록 정렬
-            df = all_stocks_df.sort_values(by='market_cap', ascending=False).head(top_n)
-            # yfinance에서 사용할 Ticker를 symbol 컬럼에서 가져옴
-            df.rename(columns={'symbol': 'Ticker'}, inplace=True)
+        elif country_code == 'kr':
+            # 한국: pykrx로 전 종목 Ticker 가져오기 (가장 정확)
+            logging.info("pykrx를 통해 KOSPI, KOSDAQ 종목 목록 가져오는 중...")
+            kospi = stock.get_market_ticker_list(market="KOSPI")
+            kosdaq = stock.get_market_ticker_list(market="KOSDAQ")
+            df['Ticker'] = [f"{ticker}.KS" for ticker in kospi] + [f"{ticker}.KQ" for ticker in kosdaq]
 
-        logging.info(f"성공! 총 {len(df)}개 기업 정보를 1차 필터링했습니다.")
+        elif country_code == 'jp':
+            # 일본: JPX 공식 엑셀 파일 직접 읽기 (가장 안정적)
+            logging.info("일본거래소(JPX) 웹사이트에서 최신 엑셀 파일 링크 찾는 중...")
+            landing_page_url = "https://www.jpx.co.jp/english/markets/statistics-equities/misc/01.html"
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            response = requests.get(landing_page_url, headers=headers)
+            soup = BeautifulSoup(response.content, 'lxml')
+            excel_link = soup.find('a', href=lambda href: href and (href.endswith('.xls') or href.endswith('.xlsx')))
+            if not excel_link:
+                raise ValueError("JPX 사이트에서 엑셀 파일 링크를 찾지 못했습니다.")
+            file_url = "https://www.jpx.co.jp" + excel_link['href']
+            logging.info(f"엑셀 파일 다운로드 링크 찾음: {file_url}")
+            df_jpx = pd.read_excel(file_url, header=0)
+            df_jpx.columns = df_jpx.columns.str.strip()
+            df_filtered = df_jpx[~df_jpx['Section/Products'].str.contains('ETFs/ ETNs|REITs/ Pro Market|JDRs', na=False)]
+            df['Ticker'] = df_filtered['Local Code'].astype(str) + '.T'
+        
+        elif country_code == 'hk':
+            # 홍콩: 위키피디아 스크래핑 (가장 간편)
+            logging.info("Wikipedia에서 홍콩 증권거래소 종목 목록 가져오는 중...")
+            url = "https://en.wikipedia.org/wiki/List_of_companies_listed_on_the_Hong_Kong_Stock_Exchange"
+            tables = pd.read_html(url)
+            df_hk = tables[0]
+            df['Ticker'] = df_hk['Stock Code'].astype(str).str.zfill(4) + '.HK'
+
+        logging.info(f"성공! 총 {len(df)}개 기업 정보를 확인합니다.")
         return df
 
     except Exception as e:
         logging.error(f"{country_name} 기업 목록을 불러오는 데 실패했습니다: {e}")
         return pd.DataFrame()
+
+def format_market_cap(value, currency):
+    if not isinstance(value, (int, float)) or value <= 0: return "N/A"
+    if value >= 1_000_000_000_000: return f"{currency}{value / 1_000_000_000_000:.2f}T"
+    if value >= 1_000_000_000: return f"{currency}{value / 1_000_000_000:.2f}B"
+    if value >= 1_000_000: return f"{currency}{value / 1_000_000:.2f}M"
+    return f"{currency}{value:,}"
 
 def find_52_week_high_stocks_from_df(stocks_df, country_config):
     if stocks_df.empty: return []
@@ -88,18 +94,9 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
     
     for index, row in stocks_df.iterrows():
         ticker = row['Ticker']
-        
-        # investpy가 제공하는 yfinance용 Ticker 사용 (국가별 접미사 자동 처리)
-        yfinance_ticker = ticker
-        if country_config['investpy_country'] == 'japan':
-            yfinance_ticker += '.T'
-        elif country_config['investpy_country'] == 'hong kong':
-            yfinance_ticker += '.HK'
-        elif country_config['investpy_country'] == 'south korea':
-            yfinance_ticker += '.KS' # 또는 .KQ 지만 KS가 대부분의 대형주를 커버
-            
         try:
-            stock_yf = yf.Ticker(yfinance_ticker)
+            logging.info(f"-> [{index+1:04d}/{total_stocks}] {ticker} 분석 중...")
+            stock_yf = yf.Ticker(ticker)
             info = stock_yf.info
             hist = stock_yf.history(period="1y", interval="1d")
 
@@ -109,14 +106,12 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
             if not current_price or not high_52_week: continue
 
             if current_price >= high_52_week * 0.98:
-                market_cap_value = info.get('marketCap', 0)
-                
                 stock_data = {
                     'Ticker': ticker,
-                    'Company Name': info.get('longName', row.get('name', 'N/A')),
+                    'Company Name': info.get('longName', row.get('Company', 'N/A')),
                     'Sector': info.get('sector', 'N/A'),
                     'Industry': info.get('industry', 'N/A'),
-                    'Market Cap': f"{currency}{market_cap_value:,}",
+                    'Market Cap': format_market_cap(info.get('marketCap', 0), currency),
                     'P/E (TTM)': f"{info.get('trailingPE', 0):.2f}" if info.get('trailingPE') else 'N/A',
                     'Current Price': f"{currency}{current_price:,.2f}",
                     '52-Week High': f"{currency}{high_52_week:,.2f}",
@@ -141,8 +136,8 @@ def main():
 
     logging.info(f"[{config['name']}] 데이터 업데이트 작업을 시작합니다.")
     
-    filtered_stocks_df = get_filtered_stocks(country_code, config)
-    found_stocks = find_52_week_high_stocks_from_df(filtered_stocks_df, config)
+    initial_stocks_df = get_stocks_by_country(country_code, config)
+    found_stocks = find_52_week_high_stocks_from_df(initial_stocks_df, config)
     
     with open(output_filename, 'w', encoding='utf-8') as f:
         json.dump(found_stocks, f, ensure_ascii=False, indent=4)
@@ -151,4 +146,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
