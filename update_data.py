@@ -24,32 +24,31 @@ def get_filtered_stocks(country_code, config):
     
     try:
         if country_code == 'us':
-            # 미국: Finviz의 강력한 필터링 기능 유지
+            # 미국: Finviz 사용
             logging.info(f"finvizfinance를 통해 '{config['market_cap_filter']}' 기준 스크리닝 중...")
             foverview = Overview()
             filters_dict = {'Exchange': ['NASDAQ', 'NYSE'], 'Market Cap.': config['market_cap_filter']}
             foverview.set_filter(filters_dict=filters_dict)
             df = foverview.screener_view(order='Market Cap.', ascend=False)
         else:
-            # ✅ [최적화] OpenBB의 'search'와 'quote' 기능을 조합한 3단계 필터링
+            # ✅ [최종 수정] OpenBB 로직에서 문제가 된 'type' 필터링을 완전히 제거
             country = config['openbb_country']
             top_n = config.get('top_n', 1500)
             
             # 1단계: 해당 국가의 전체 Ticker 목록 가져오기
-            logging.info(f"OpenBB: '{country}'의 전체 Ticker 목록 가져오는 중...")
-            all_symbols_df = obb.equity.search(country=country).to_df()
-            # '주식(Stock)' 타입만 필터링하여 정확도 향상
-            stocks_only_df = all_symbols_df[all_symbols_df['type'] == 'Stock'].copy()
-            symbols_list = stocks_only_df['symbol'].tolist()
+            logging.info(f"OpenBB: '{country}'의 전체 증권 목록 가져오는 중...")
+            all_securities_df = obb.equity.search(country=country).to_df()
+            symbols_list = all_securities_df['symbol'].tolist()
             
             if not symbols_list:
                 raise ValueError(f"OpenBB에서 '{country}'의 Ticker 목록을 찾을 수 없습니다.")
 
-            # 2단계: 필터링된 주식 목록의 시세 정보(시가총액 포함)를 일괄 조회
-            logging.info(f"OpenBB: 총 {len(symbols_list)}개 주식의 시세 정보 조회 중 (시간 단축)...")
+            # 2단계: 전체 Ticker의 시세 정보(시가총액 포함)를 일괄 조회
+            logging.info(f"OpenBB: 총 {len(symbols_list)}개 증권의 시세 정보 조회 중...")
             quote_df = obb.equity.price.quote(symbol=symbols_list).to_df()
             
-            # 3단계: 시가총액(marketCap) 기준으로 상위 N개 필터링
+            # 3단계: 시가총액(marketCap)이 유효한 데이터만 남기고, 정렬 후 상위 N개 필터링
+            quote_df.dropna(subset=['marketCap'], inplace=True) # 시가총액 없는 데이터(ETF 등) 제거
             df_filtered = quote_df.sort_values(by='marketCap', ascending=False).head(top_n)
             
             # yfinance에서 사용할 Ticker 컬럼 생성
@@ -63,6 +62,7 @@ def get_filtered_stocks(country_code, config):
     logging.info(f"성공! 총 {len(df)}개 기업 정보를 1차 필터링했습니다.")
     return df
 
+# --- find_52_week_high_stocks_from_df와 main 함수는 이전 버전과 동일합니다 ---
 def find_52_week_high_stocks_from_df(stocks_df, country_config):
     if stocks_df.empty: return []
     high_stocks = []
@@ -94,7 +94,7 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
                     'Market Cap': f"{currency}{market_cap_value:,}",
                     'P/E (TTM)': f"{info.get('trailingPE', 0):.2f}" if info.get('trailingPE') else 'N/A',
                     'Current Price': f"{currency}{current_price:,.2f}",
-                    '52-Week High': f"{currency}{high_52_week:,.2f}",
+                    '52-Week High': f"{currency}{high_52_week:.2f}",
                 }
                 high_stocks.append(stock_data)
                 logging.info(f"✅ [{index+1:04d}/{total_stocks}] 발견! {ticker}")
