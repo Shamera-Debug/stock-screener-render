@@ -58,6 +58,13 @@ def get_filtered_stocks(country_code, config):
             
             # investpy로 국가의 모든 주식 정보를 가져옴 (시가총액 포함)
             all_stocks_df = investpy.get_stocks(country=country)
+
+            # --- ✅ [디버깅 코드 추가] ---
+            # investpy가 반환한 실제 컬럼 목록을 확인합니다.
+            print("===== investpy가 반환한 실제 컬럼 목록 =====")
+            print(all_stocks_df.columns.tolist())
+            print("==========================================")
+            # ------------------------------------
             
             # 시가총액(market_cap)이 높은 순으로 정렬 후 상위 N개 선택
             # market_cap 단위는 백만(million)이므로 큰 숫자가 위로 오도록 정렬
@@ -144,3 +151,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
