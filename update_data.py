@@ -63,13 +63,23 @@ def get_stocks_by_country(country_code, config):
             df['Ticker'] = df_filtered['Local Code'].astype(str) + '.T'
         
         elif country_code == 'hk':
+            # ✅ [수정] 홍콩: 디버깅 코드 추가
             logging.info("Wikipedia에서 홍콩 증권거래소 종목 목록 스크래핑 중...")
             url = "https://en.wikipedia.org/wiki/List_of_companies_listed_on_the_Hong_Kong_Stock_Exchange"
             tables = pd.read_html(url)
             df_hk = tables[0]
-            # 컬럼 이름이 'Stock Code' 또는 'Ticker'일 수 있으므로 유연하게 처리
-            ticker_col = 'Stock Code' if 'Stock Code' in df_hk.columns else 'Ticker'
-            df['Ticker'] = df_hk[ticker_col].astype(str).str.zfill(4) + '.HK'
+
+            # --- 디버깅 코드 ---
+            print("\n\n===== [디버그] 홍콩 위키피디아 테이블 결과 =====")
+            print("--- 처음 5줄 ---")
+            print(df_hk.head())
+            print("\n--- 전체 컬럼 목록 ---")
+            print(df_hk.columns.tolist())
+            print("==========================================\n\n")
+            # --------------------
+
+            # 디버깅을 위해 여기서 안전하게 종료
+            raise SystemExit("홍콩 데이터 디버깅 완료. 터미널 출력을 확인하세요.")
 
         logging.info(f"성공! 총 {len(df)}개 기업 정보를 확인합니다.")
         return df
@@ -106,9 +116,20 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
     for index, row in stocks_df.iterrows():
         ticker = row['Ticker']
         try:
-            logging.info(f"-> [{index+1:04d}/{total_stocks}] {ticker} 분석 중...")
+            if (index + 1) % 50 == 0:
+                 logging.info(f"-> [{index+1:04d}/{total_stocks}] {ticker} 분석 중...")
             stock_yf = yf.Ticker(ticker)
             info = stock_yf.info
+
+            # ✅ [수정] 이름, 섹터, 산업 정보가 '모두' 없을 때만 건너뛰도록 필터링 강화
+            company_name = info.get('longName')
+            sector = info.get('sector')
+            industry = info.get('industry')
+            
+            if not company_name and not sector and not industry:
+                logging.info(f"--> {ticker}: 필수 정보(이름, 섹터, 산업) 모두 누락되어 건너뜁니다.")
+                continue
+
             hist = stock_yf.history(period="1y", interval="1d")
 
             if hist.empty: continue
@@ -116,11 +137,13 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
             high_52_week = info.get('fiftyTwoWeekHigh', hist['High'].max())
             if not current_price or not high_52_week: continue
 
-            if current_price >= high_52_week * 0.50:
+            if current_price >= high_52_week * 0.70:
                 market_cap_value = info.get('marketCap', 0)
                 stock_data = {
-                    'Ticker': ticker, 'Company Name': info.get('longName', row.get('Company', 'N/A')),
-                    'Sector': info.get('sector', 'N/A'), 'Industry': info.get('industry', 'N/A'),
+                    'Ticker': ticker,
+                    'Company Name': company_name or 'N/A', # 이름이 없으면 N/A 처리
+                    'Sector': sector or 'N/A',
+                    'Industry': industry or 'N/A',
                     'Market Cap': f"{currency}{market_cap_value:,}",
                     'P/E (TTM)': f"{info.get('trailingPE', 0):.2f}" if info.get('trailingPE') else 'N/A',
                     'Current Price': f"{currency}{current_price:,.2f}",
@@ -163,4 +186,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
