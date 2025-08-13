@@ -3,8 +3,4 @@ gunicorn
 yfinance
 pandas
 finvizfinance
-pykrx
-openpyxl
-requests
-beautifulsoup4
-lxml
+openbb
