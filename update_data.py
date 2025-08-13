@@ -63,23 +63,36 @@ def get_stocks_by_country(country_code, config):
             df['Ticker'] = df_filtered['Local Code'].astype(str) + '.T'
         
         elif country_code == 'hk':
-            # ✅ [수정] 홍콩: 디버깅 코드 추가
+            # ✅ [최종 수정] BeautifulSoup으로 정확한 테이블 찾기
             logging.info("Wikipedia에서 홍콩 증권거래소 종목 목록 스크래핑 중...")
             url = "https://en.wikipedia.org/wiki/List_of_companies_listed_on_the_Hong_Kong_Stock_Exchange"
-            tables = pd.read_html(url)
-            df_hk = tables[0]
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            response = requests.get(url, headers=headers)
+            soup = BeautifulSoup(response.content, 'lxml')
 
-            # --- 디버깅 코드 ---
-            print("\n\n===== [디버그] 홍콩 위키피디아 테이블 결과 =====")
-            print("--- 처음 5줄 ---")
-            print(df_hk.head())
-            print("\n--- 전체 컬럼 목록 ---")
-            print(df_hk.columns.tolist())
-            print("==========================================\n\n")
-            # --------------------
+            # 'wikitable' 클래스를 가진 모든 테이블을 찾음
+            all_tables = soup.find_all('table', {'class': 'wikitable'})
+            
+            correct_table = None
+            # 여러 테이블 중에서 'Stock code'라는 헤더가 있는 테이블을 찾음
+            for table in all_tables:
+                if 'Stock code' in str(table.find_all('th')):
+                    correct_table = table
+                    break
+            
+            if correct_table is None:
+                raise ValueError("홍콩 주식 목록 테이블을 찾지 못했습니다.")
 
-            # 디버깅을 위해 여기서 안전하게 종료
-            raise SystemExit("홍콩 데이터 디버깅 완료. 터미널 출력을 확인하세요.")
+            # 찾아낸 정확한 테이블을 pandas로 읽어들임
+            df_hk = pd.read_html(str(correct_table))[0]
+            
+            # Ticker 컬럼 이름이 바뀔 수 있으므로 유연하게 처리
+            possible_names = ['Stock code', 'Stock Code', 'Ticker', 'Code']
+            ticker_col = next((col for col in possible_names if col in df_hk.columns), None)
+            if not ticker_col:
+                raise KeyError(f"홍콩 Ticker 컬럼을 찾을 수 없습니다. 확인된 컬럼: {df_hk.columns.tolist()}")
+
+            df['Ticker'] = df_hk[ticker_col].astype(str).str.zfill(4) + '.HK'
 
         logging.info(f"성공! 총 {len(df)}개 기업 정보를 확인합니다.")
         return df
@@ -186,5 +199,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
