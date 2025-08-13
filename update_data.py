@@ -32,11 +32,19 @@ def get_stocks_by_country(country_code, config):
     df = pd.DataFrame()
     try:
         if country_code == 'us':
-            logging.info("finvizfinance를 통해 미국 대형주 스크리닝 중...")
-            foverview = Overview()
-            filters_dict = {'Exchange': ['NASDAQ', 'NYSE'], 'Market Cap.': config['market_cap_filter']}
-            foverview.set_filter(filters_dict=filters_dict)
-            df = foverview.screener_view(order='Market Cap.', ascend=False)
+            # ✅ [최종 수정] NASDAQ과 NYSE를 각각 조회하여 합칩니다.
+            market_cap_filter = config['market_cap_filter']
+            all_dfs = []
+            for exchange in ['NASDAQ', 'NYSE']:
+                logging.info(f"finvizfinance를 통해 '{exchange}' 거래소 스크리닝 중...")
+                foverview = Overview()
+                filters_dict = {'Exchange': exchange, 'Market Cap.': market_cap_filter}
+                foverview.set_filter(filters_dict=filters_dict)
+                exchange_df = foverview.screener_view(order='Market Cap.', ascend=False)
+                all_dfs.append(exchange_df)
+            
+            # 조회된 두 거래소의 결과를 하나의 데이터프레임으로 합침
+            df = pd.concat(all_dfs, ignore_index=True)
 
         elif country_code == 'kr':
             logging.info("pykrx를 통해 KOSPI, KOSDAQ 전 종목 Ticker 가져오는 중...")
@@ -154,4 +162,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
