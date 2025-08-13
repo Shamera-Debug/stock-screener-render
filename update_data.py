@@ -31,27 +31,39 @@ def get_filtered_stocks(country_code, config):
             foverview.set_filter(filters_dict=filters_dict)
             df = foverview.screener_view(order='Market Cap.', ascend=False)
         else:
-            # ✅ [최종 수정] OpenBB 로직에서 문제가 된 'type' 필터링을 완전히 제거
+            # ✅ [최적화] OpenBB 로직에 '분할 처리(Chunking)' 추가
             country = config['openbb_country']
             top_n = config.get('top_n', 1500)
             
-            # 1단계: 해당 국가의 전체 Ticker 목록 가져오기
-            logging.info(f"OpenBB: '{country}'의 전체 증권 목록 가져오는 중...")
+            logging.info(f"OpenBB: '{country}'의 전체 Ticker 목록 가져오는 중...")
             all_securities_df = obb.equity.search(country=country).to_df()
             symbols_list = all_securities_df['symbol'].tolist()
             
             if not symbols_list:
                 raise ValueError(f"OpenBB에서 '{country}'의 Ticker 목록을 찾을 수 없습니다.")
 
-            # 2단계: 전체 Ticker의 시세 정보(시가총액 포함)를 일괄 조회
-            logging.info(f"OpenBB: 총 {len(symbols_list)}개 증권의 시세 정보 조회 중...")
-            quote_df = obb.equity.price.quote(symbol=symbols_list).to_df()
+            # --- 분할 처리 시작 ---
+            chunk_size = 500 # 한 번에 처리할 종목 수
+            all_quotes = []
+            logging.info(f"OpenBB: 총 {len(symbols_list)}개 증권의 시세 정보를 {chunk_size}개씩 분할하여 조회 시작...")
+
+            for i in range(0, len(symbols_list), chunk_size):
+                chunk = symbols_list[i:i + chunk_size]
+                logging.info(f"--> {i+1}번째부터 {i+len(chunk)}번째 Ticker 처리 중...")
+                try:
+                    quote_df_chunk = obb.equity.price.quote(symbol=chunk).to_df()
+                    all_quotes.append(quote_df_chunk)
+                except Exception as e:
+                    logging.warning(f"분할 처리 중 오류 발생 (건너뜀): {e}")
+                    continue
             
-            # 3단계: 시가총액(marketCap)이 유효한 데이터만 남기고, 정렬 후 상위 N개 필터링
-            quote_df.dropna(subset=['marketCap'], inplace=True) # 시가총액 없는 데이터(ETF 등) 제거
+            # 모든 분할 결과를 하나로 합침
+            quote_df = pd.concat(all_quotes)
+            # --- 분할 처리 끝 ---
+            
+            quote_df.dropna(subset=['marketCap'], inplace=True)
             df_filtered = quote_df.sort_values(by='marketCap', ascending=False).head(top_n)
             
-            # yfinance에서 사용할 Ticker 컬럼 생성
             df = df_filtered.copy()
             df['Ticker'] = df.index + config['yfinance_suffix']
 
@@ -126,3 +138,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
