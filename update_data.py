@@ -92,7 +92,7 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
                     'Market Cap': f"{currency}{market_cap_value:,}",
                     'P/E (TTM)': f"{info.get('trailingPE', 0):.2f}" if info.get('trailingPE') else 'N/A',
                     'Current Price': f"{currency}{current_price:,.2f}",
-                    '52-Week High': f"{currency}{high_52_week,.2f}",
+                    '52-Week High': f"{currency}{high_52_week:,.2f}",
                 }
                 high_stocks.append(stock_data)
                 logging.info(f"✅ [{index+1:04d}/{total_stocks}] 발견! {ticker}")
@@ -133,3 +133,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
