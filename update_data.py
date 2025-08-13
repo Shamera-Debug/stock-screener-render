@@ -7,12 +7,19 @@ import os
 import sys
 from openbb import obb
 
+# --- ✅ [테스트 설정] ---
+# True로 설정하면 각 국가별로 50개 종목만 테스트합니다.
+# 실제 운영 시에는 이 값을 False로 바꾸세요.
+IS_TEST_MODE = True
+TEST_SAMPLE_SIZE = 50
+# -------------------------
+
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # 최종 국가별 설정
 COUNTRY_CONFIG = {
-    'us': { 'name': '미국 (USA)', 'market_cap_filter': '+Large (over $10bln)', 'currency_symbol': '$' },
+    'us': { 'name': '미국 (USA)', 'market_cap_filter': '+Large (over $10bln)', 'currency_symbol': '$'},
     'jp': { 'name': '일본 (Japan)', 'exchange_country': 'JP', 'yfinance_suffix': '.T', 'currency_symbol': '¥', 'top_n': 1500 },
     'hk': { 'name': '홍콩 (Hong Kong)', 'exchange_country': 'HK', 'yfinance_suffix': '.HK', 'currency_symbol': 'HK$', 'top_n': 1500 },
     'kr': { 'name': '한국 (Korea)', 'exchange_country': 'KR', 'yfinance_suffix': '.KS', 'currency_symbol': '₩', 'top_n': 1500 }
@@ -24,14 +31,12 @@ def get_filtered_stocks(country_code, config):
     
     try:
         if country_code == 'us':
-            # 미국: Finviz 사용
             logging.info(f"finvizfinance를 통해 '{config['market_cap_filter']}' 기준 스크리닝 중...")
             foverview = Overview()
             filters_dict = {'Exchange': ['NASDAQ', 'NYSE'], 'Market Cap.': config['market_cap_filter']}
             foverview.set_filter(filters_dict=filters_dict)
             df = foverview.screener_view(order='Market Cap.', ascend=False)
         else:
-            # 해외 국가: OpenBB 사용
             exchange_country = config['exchange_country']
             top_n = config.get('top_n', 1500)
             
@@ -42,7 +47,12 @@ def get_filtered_stocks(country_code, config):
             if not symbols_list:
                 raise ValueError(f"OpenBB에서 '{exchange_country}'의 Ticker 목록을 찾을 수 없습니다.")
 
-            logging.info(f"OpenBB: 총 {len(symbols_list)}개 증권의 시세 정보 조회 중 (시간 소요)...")
+            # ✅ [최적화] 시간이 오래 걸리는 작업 전에 Ticker 목록을 먼저 줄입니다.
+            if IS_TEST_MODE:
+                logging.info(f"--- ⚠️ 테스트 모드: {len(symbols_list)}개 중 {TEST_SAMPLE_SIZE}개 Ticker만 사용합니다. ---")
+                symbols_list = symbols_list[:TEST_SAMPLE_SIZE]
+
+            logging.info(f"OpenBB: 총 {len(symbols_list)}개 증권의 시세 정보 조회 중...")
             quote_df = obb.equity.price.quote(symbol=symbols_list).to_df()
             
             quote_df.dropna(subset=['marketCap'], inplace=True)
@@ -59,6 +69,7 @@ def get_filtered_stocks(country_code, config):
     return df
 
 def find_52_week_high_stocks_from_df(stocks_df, country_config):
+    # 이 함수는 수정할 필요가 없습니다. (이전 버전과 동일)
     if stocks_df.empty: return []
     high_stocks = []
     total_stocks = len(stocks_df)
@@ -78,11 +89,8 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
             high_52_week = info.get('fiftyTwoWeekHigh', hist['High'].max())
             if not current_price or not high_52_week: continue
 
-
-
-            #### 98 수정
-            if current_price >= high_52_week * 0.90:
-                market_cap_value = info.get('marketCap', 0)
+            if current_price >= high_52_week * 0.98:
+                market_cap_value = info.get('marketCap', row.get('marketCap', 0))
                 
                 stock_data = {
                     'Ticker': ticker,
@@ -103,6 +111,7 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
     return high_stocks
 
 def main():
+    # main 함수에서는 더 이상 테스트 코드가 필요 없습니다.
     if len(sys.argv) < 2 or sys.argv[1] not in COUNTRY_CONFIG:
         print(f"Error: Usage: python {sys.argv[0]} <country_code>")
         print(f"Available codes: {list(COUNTRY_CONFIG.keys())}")
@@ -114,17 +123,8 @@ def main():
 
     logging.info(f"[{config['name']}] 데이터 업데이트 작업을 시작합니다.")
     
-    initial_stocks_df = get_filtered_stocks(country_code, config)
-    
-    # --- ✅ 테스트용 코드 ---
-    # 1차 필터링된 목록에서 상위 30개만 잘라서 테스트합니다.
-    # 실제 운영 시에는 이 두 줄을 삭제하거나 주석(#) 처리하세요.
-    logging.info(f"--- ⚠️ 테스트 모드: {len(initial_stocks_df)}개 중 30개만 사용합니다. ---")
-    test_df = initial_stocks_df.head(30)
-    # -----------------------
-
-    # found_stocks = find_52_week_high_stocks_from_df(initial_stocks_df, config) # 원본 코드
-    found_stocks = find_52_week_high_stocks_from_df(test_df, config) # 테스트용 코드
+    filtered_stocks_df = get_filtered_stocks(country_code, config)
+    found_stocks = find_52_week_high_stocks_from_df(filtered_stocks_df, config)
     
     with open(output_filename, 'w', encoding='utf-8') as f:
         json.dump(found_stocks, f, ensure_ascii=False, indent=4)
@@ -133,4 +133,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
