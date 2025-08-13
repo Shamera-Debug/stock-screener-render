@@ -116,7 +116,7 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
             high_52_week = info.get('fiftyTwoWeekHigh', hist['High'].max())
             if not current_price or not high_52_week: continue
 
-            if current_price >= high_52_week * 0.98:
+            if current_price >= high_52_week * 0.50:
                 market_cap_value = info.get('marketCap', 0)
                 stock_data = {
                     'Ticker': ticker, 'Company Name': info.get('longName', row.get('Company', 'N/A')),
@@ -163,3 +163,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
