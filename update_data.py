@@ -71,28 +71,28 @@ def get_stocks_by_country(country_code, config):
             df['Ticker'] = [f"{ticker}.KS" for ticker in kospi] + [f"{ticker}.KQ" for ticker in kosdaq]
 
         elif country_code == 'jp':
-            # ✅ [대규모 수정] 일본: 2단계 스크레이핑으로 변경
             logging.info("일본거래소(JPX) 웹사이트에서 최신 엑셀 파일 링크 찾는 중...")
-            
-            # 1단계: 엑셀 파일이 있는 '소개 페이지'에 접속
+    
             landing_page_url = "https://www.jpx.co.jp/english/markets/statistics-equities/misc/01.html"
-            headers = {'User-Agent': 'Mozilla/5.0'} # 차단을 피하기 위한 헤더
+            headers = {'User-Agent': 'Mozilla/5.0'}
             response = requests.get(landing_page_url, headers=headers)
             soup = BeautifulSoup(response.content, 'lxml')
-            
-            # 2단계: 페이지에서 '.xls' 또는 '.xlsx'로 끝나는 첫 번째 링크(href)를 찾음
+    
             excel_link = soup.find('a', href=lambda href: href and (href.endswith('.xls') or href.endswith('.xlsx')))
-            
+    
             if not excel_link:
                 raise ValueError("JPX 사이트에서 엑셀 파일 링크를 찾지 못했습니다.")
-
-            # 상대 경로일 수 있으므로 완전한 URL로 만듦
+    
             file_url = "https://www.jpx.co.jp" + excel_link['href']
             logging.info(f"엑셀 파일 다운로드 링크 찾음: {file_url}")
-
-            # 3단계: 찾아낸 링크로 엑셀 파일 읽기
+    
             df_jpx = pd.read_excel(file_url, header=1)
+    
+            # ✅ [최종 수정] 모든 컬럼 이름의 앞뒤 공백을 자동으로 제거합니다.
+            df_jpx.columns = df_jpx.columns.str.strip()
+    
             df = pd.DataFrame()
+            # 이제 'Local Code' 컬럼이 정확히 일치하게 됩니다.
             df['Ticker'] = df_jpx['Local Code'].astype(str) + '.T'
 
         elif country_code == 'hk':
@@ -197,6 +197,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
