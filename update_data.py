@@ -11,7 +11,7 @@ import investpy
 # --- 테스트 설정 ---
 # True로 설정하면 각 국가별로 30개 종목만 테스트합니다.
 # 실제 운영 시에는 이 값을 False로 바꾸세요.
-IS_TEST_MODE = True
+IS_TEST_MODE = False
 TEST_SAMPLE_SIZE = 30
 # --------------------
 
@@ -114,7 +114,7 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
             high_52_week = info.get('fiftyTwoWeekHigh', hist['High'].max())
             if not current_price or not high_52_week: continue
 
-            if current_price >= high_52_week * 0.70:
+            if current_price >= high_52_week * 0.97:
                 market_cap_value = info.get('marketCap', 0)
                 stock_data = {
                     'Ticker': ticker,
@@ -162,5 +162,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
