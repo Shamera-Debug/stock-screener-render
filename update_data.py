@@ -5,39 +5,17 @@ import logging
 import json
 import os
 import sys
-from openbb import obb # ✅ [핵심] OpenBB 라이브러리 추가
+from openbb import obb # OpenBB 라이브러리
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# 최종 국가별 설정 (OpenBB 기준)
+# 최종 국가별 설정
 COUNTRY_CONFIG = {
-    'us': {
-        'name': '미국 (USA)',
-        'market_cap_filter': '+Large (over $10bln)', # Finviz 필터
-        'currency_symbol': '$'
-    },
-    'jp': {
-        'name': '일본 (Japan)',
-        'openbb_country': 'japan', # OpenBB에서 사용하는 국가 이름
-        'yfinance_suffix': '.T', # yfinance Ticker 접미사
-        'currency_symbol': '¥',
-        'top_n': 1500
-    },
-    'hk': {
-        'name': '홍콩 (Hong Kong)',
-        'openbb_country': 'hong_kong',
-        'yfinance_suffix': '.HK',
-        'currency_symbol': 'HK$',
-        'top_n': 1500
-    },
-    'kr': {
-        'name': '한국 (Korea)',
-        'openbb_country': 'south_korea',
-        'yfinance_suffix': '.KS', # 코스피(.KS), 코스닥(.KQ) 중 대표
-        'currency_symbol': '₩',
-        'top_n': 1500
-    }
+    'us': { 'name': '미국 (USA)', 'market_cap_filter': '+Large (over $10bln)', 'currency_symbol': '$'},
+    'jp': { 'name': '일본 (Japan)', 'openbb_country': 'japan', 'yfinance_suffix': '.T', 'currency_symbol': '¥', 'top_n': 1500 },
+    'hk': { 'name': '홍콩 (Hong Kong)', 'openbb_country': 'hong_kong', 'yfinance_suffix': '.HK', 'currency_symbol': 'HK$', 'top_n': 1500 },
+    'kr': { 'name': '한국 (Korea)', 'openbb_country': 'south_korea', 'yfinance_suffix': '.KS', 'currency_symbol': '₩', 'top_n': 1500 }
 }
 
 def get_filtered_stocks(country_code, config):
@@ -46,34 +24,34 @@ def get_filtered_stocks(country_code, config):
     
     try:
         if country_code == 'us':
-            # 미국: Finviz 사용 (기존과 동일)
+            # 미국: Finviz 사용
             logging.info(f"finvizfinance를 통해 '{config['market_cap_filter']}' 기준 스크리닝 중...")
             foverview = Overview()
             filters_dict = {'Exchange': ['NASDAQ', 'NYSE'], 'Market Cap.': config['market_cap_filter']}
             foverview.set_filter(filters_dict=filters_dict)
             df = foverview.screener_view(order='Market Cap.', ascend=False)
         else:
-            # ✅ [최종 수정] 그 외 모든 국가는 OpenBB의 2단계 조합 방식 사용
+            # ✅ [최종 수정] OpenBB의 기본 Provider와 2단계 필터링 방식 사용
             country = config['openbb_country']
             top_n = config.get('top_n', 1500)
             
-            # 1단계: 해당 국가의 전체 Ticker 목록 가져오기
-            logging.info(f"OpenBB: '{country}'의 전체 Ticker 목록 가져오는 중...")
-            all_symbols_df = obb.equity.search(country=country).to_df()
-            symbols_list = all_symbols_df['symbol'].tolist()
+            # 1단계: 해당 국가의 모든 증권(securities) 목록 가져오기
+            logging.info(f"OpenBB: '{country}'의 전체 증권 목록 가져오는 중...")
+            all_securities_df = obb.equity.search(country=country).to_df()
             
-            if not symbols_list:
-                raise ValueError(f"OpenBB에서 '{country}'의 Ticker 목록을 찾을 수 없습니다.")
+            # 2단계: 가져온 목록에서 '주식(Stock)' 타입만 필터링
+            stocks_only_df = all_securities_df[all_securities_df['type'] == 'Stock'].copy()
+            symbols_list = stocks_only_df['symbol'].tolist()
+            logging.info(f"총 {len(symbols_list)}개의 주식 Ticker를 찾았습니다. 펀더멘털 정보 조회 시작...")
 
-            # 2단계: 전체 Ticker의 펀더멘털(시가총액 포함) 정보를 일괄 조회
-            logging.info(f"OpenBB: 총 {len(symbols_list)}개 Ticker의 펀더멘털 정보 조회 중 (시간 소요)...")
-            fundamentals_df = obb.equity.fundamental.metrics(symbol=symbols_list, provider="yfinance").to_df()
+            # 3단계: 필터링된 주식 목록의 펀더멘털 정보를 일괄 조회
+            fundamentals_df = obb.equity.fundamental.metrics(symbol=symbols_list).to_df()
             
-            # 3단계: 시가총액(market_cap) 기준으로 상위 N개 필터링
+            # 4단계: 시가총액(market_cap) 기준으로 상위 N개 필터링
             df_filtered = fundamentals_df.sort_values(by='market_cap', ascending=False).head(top_n)
             
             # yfinance에서 사용할 Ticker 컬럼 생성
-            df = df_filtered.copy() # SettingWithCopyWarning 방지
+            df = df_filtered.copy()
             df['Ticker'] = df.index + config['yfinance_suffix']
 
     except Exception as e:
@@ -149,4 +127,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
