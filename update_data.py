@@ -150,6 +150,7 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
     for index, row in stocks_df.iterrows():
         ticker = row['Ticker']
         try:
+            logging.info(f"-> [{index+1:04d}/{total_stocks}] {ticker} 분석 중...")
             stock_yf = yf.Ticker(ticker)
             info = stock_yf.info
             hist = stock_yf.history(period="1y", interval="1d")
@@ -201,6 +202,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
