@@ -15,35 +15,24 @@
         .content { padding: 2em; transition: margin-left 0.3s ease-in-out; margin-left: 220px; }
         .content.full-width { margin-left: 0; }
         .container { max-width: 100%; margin: auto; overflow-x: auto; }
-        h1 { text-align: center; color: #007bff; margin-bottom: 0.5em; } /* margin-bottom 수정 */
-        
-        /* ✅ [추가] 업데이트 시간 표시 스타일 */
-        .last-updated {
-            text-align: center;
-            color: #6c757d;
-            font-size: 0.9em;
-            margin-bottom: 2em;
-        }
-
+        h1 { text-align: center; color: #007bff; margin-bottom: 0.5em; }
+        .last-updated { text-align: center; color: #6c757d; font-size: 0.9em; margin-bottom: 2em; }
         table { width: 100%; border-collapse: collapse; box-shadow: 0 2px 15px rgba(0,0,0,0.1); background-color: #fff; }
         th, td { border: 1px solid #e0e0e0; text-align: left; padding: 12px 15px; white-space: nowrap; }
         tbody tr:nth-of-type(even) { background-color: #f9f9f9; }
         tbody tr:hover { background-color: #f1f1f1; }
-        
-        /* ✅ [확인] 헤더 고정을 위한 최종 CSS 코드 */
-        thead th {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            background-color: #007bff;
-            color: #ffffff;
-            font-weight: 600;
-        }
+        thead th { position: sticky; top: 0; z-index: 10; background-color: #007bff; color: #ffffff; font-weight: 600; }
     </style>
 </head>
 <body>
     <nav class="sidebar" id="sidebar">
-        </nav>
+        <h2>🚀 Stock Screener</h2>
+        <ul>
+            {% for code, config in countries %}
+            <li><a href="/{{ code }}" class="{{ 'active' if code == active_country_code else '' }}">{{ config['name'] }}</a></li>
+            {% endfor %}
+        </ul>
+    </nav>
 
     <button id="menu-toggle">☰</button>
 
@@ -56,7 +45,21 @@
             </p>
             
             <table>
-                </table>
+                <thead>
+                    <tr>
+                        <th>티커</th><th>회사 이름</th><th>섹터</th><th>산업</th><th>시가총액</th><th>P/E</th><th>현재가</th><th>52주 신고가</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stock in stocks %}
+                    <tr>
+                        <td>{{ stock['Ticker'] }}</td><td>{{ stock['Company Name'] }}</td><td>{{ stock['Sector'] }}</td><td>{{ stock['Industry'] }}</td><td>{{ stock['Market Cap'] }}</td><td>{{ stock['P/E (TTM)'] }}</td><td>{{ stock['Current Price'] }}</td><td>{{ stock['52-Week High'] }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" style="text-align: center; padding: 20px;">조건에 맞는 종목을 찾지 못했거나, 데이터가 아직 준비되지 않았습니다.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </main>
 
@@ -71,4 +74,3 @@
     </script>
 </body>
 </html>
-
