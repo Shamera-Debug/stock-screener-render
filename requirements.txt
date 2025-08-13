@@ -3,4 +3,5 @@ gunicorn
 yfinance
 pandas
 finvizfinance
-openbb
+pykrx
+investpy
