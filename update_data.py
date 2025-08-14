@@ -7,6 +7,7 @@ import os
 import sys
 from pykrx import stock
 import investpy
+import shutil
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -144,20 +145,20 @@ def main():
 
     country_code = sys.argv[1]
     config = COUNTRY_CONFIG[country_code]
+    
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     output_filename = os.path.join(BASE_DIR, f"{country_code}_stocks.json")
+    backup_filename = os.path.join(BASE_DIR, f"{country_code}_stocks_old.json")
+
+    # ✅ [추가] 기존 데이터 파일을 백업합니다.
+    if os.path.exists(output_filename):
+        logging.info(f"기존 데이터 파일 '{output_filename}'을 '{backup_filename}'으로 백업합니다.")
+        shutil.copyfile(output_filename, backup_filename)
 
     logging.info(f"[{config['name']}] 데이터 업데이트 작업을 시작합니다.")
     
     initial_stocks_df = get_stocks_by_country(country_code, config)
-
-
-
-    if IS_TEST_MODE:
-        logging.info(f"--- ⚠️ 테스트 모드: {len(initial_stocks_df)}개 중 {TEST_SAMPLE_SIZE}개만 사용합니다. ---")
-        initial_stocks_df = initial_stocks_df.head(TEST_SAMPLE_SIZE)
-
-    filtered_stocks_df = filter_by_market_cap(initial_stocks_df, country_code, config)
-    found_stocks = find_52_week_high_stocks_from_df(filtered_stocks_df, config)
+    found_stocks = find_52_week_high_stocks_from_df(initial_stocks_df, config)
     
     with open(output_filename, 'w', encoding='utf-8') as f:
         json.dump(found_stocks, f, ensure_ascii=False, indent=4)
