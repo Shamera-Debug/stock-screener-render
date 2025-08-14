@@ -12,9 +12,9 @@
         .sidebar ul li a { display: block; color: #adb5bd; text-decoration: none; padding: 15px 25px; transition: background-color 0.2s, color 0.2s; }
         .sidebar ul li a:hover, .sidebar ul li a.active { background-color: #00aaff; color: #ffffff; }
         #menu-toggle { position: fixed; top: 15px; left: 15px; z-index: 101; background: none; border: none; color: #00aaff; font-size: 24px; cursor: pointer; }
-        .content { padding: 2em; transition: margin-left 0.3s ease-in-out; margin-left: 220px; }
+        .content { display: flex; flex-direction: column; padding: 2em; transition: margin-left 0.3s ease-in-out; margin-left: 220px; height: 100vh; box-sizing: border-box; }
         .content.full-width { margin-left: 0; }
-        .container { max-width: 100%; margin: auto; overflow-x: auto; }
+        .container { flex-grow: 1; overflow-y: auto; max-width: 100%; }
         h1 { text-align: center; color: #007bff; margin-bottom: 0.5em; }
         .last-updated { text-align: center; color: #6c757d; font-size: 0.9em; margin-bottom: 2em; }
         table { width: 100%; border-collapse: collapse; box-shadow: 0 2px 15px rgba(0,0,0,0.1); background-color: #fff; }
@@ -22,6 +22,7 @@
         tbody tr:nth-of-type(even) { background-color: #f9f9f9; }
         tbody tr:hover { background-color: #f1f1f1; }
         thead th { position: sticky; top: 0; z-index: 10; background-color: #007bff; color: #ffffff; font-weight: 600; }
+        .new-item { background-color: #e7f7ff !important; }
     </style>
 </head>
 <body>
@@ -39,24 +40,36 @@
     <main class="content" id="main-content">
         <div class="container">
             <h1>📈 52주 신고가 근접 종목 ({{ country_name }})</h1>
-            
-            <p class="last-updated">
-                최근 업데이트: {{ last_updated }}
-            </p>
-            
+            <p class="last-updated">최근 업데이트: {{ last_updated }}</p>
             <table>
                 <thead>
                     <tr>
-                        <th>티커</th><th>회사 이름</th><th>섹터</th><th>산업</th><th>시가총액</th><th>P/E</th><th>현재가</th><th>52주 신고가</th>
+                        <th>티커</th>
+                        <th>회사 이름</th>
+                        <th>섹터</th>
+                        <th>산업</th>
+                        <th>시가총액</th>
+                        <th>P/E</th>
+                        <th>현재가</th>
+                        <th>52주 신고가</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for stock in stocks %}
-                    <tr>
-                        <td>{{ stock['Ticker'] }}</td><td>{{ stock['Company Name'] }}</td><td>{{ stock['Sector'] }}</td><td>{{ stock['Industry'] }}</td><td>{{ stock['Market Cap'] }}</td><td>{{ stock['P/E (TTM)'] }}</td><td>{{ stock['Current Price'] }}</td><td>{{ stock['52-Week High'] }}</td>
+                    <tr class="{{ 'new-item' if stock.is_new else '' }}">
+                        <td>{{ stock['Ticker'] }}</td>
+                        <td>{{ stock['Company Name'] }}</td>
+                        <td>{{ stock['Sector'] }}</td>
+                        <td>{{ stock['Industry'] }}</td>
+                        <td>{{ stock['Market Cap'] }}</td>
+                        <td>{{ stock['P/E (TTM)'] }}</td>
+                        <td>{{ stock['Current Price'] }}</td>
+                        <td>{{ stock['52-Week High'] }}</td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="8" style="text-align: center; padding: 20px;">조건에 맞는 종목을 찾지 못했거나, 데이터가 아직 준비되지 않았습니다.</td></tr>
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 20px;">조건에 맞는 종목을 찾지 못했거나, 데이터가 아직 준비되지 않았습니다.</td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
