@@ -8,6 +8,8 @@ import sys
 from pykrx import stock
 import investpy
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # --- 테스트 설정 ---
 # True로 설정하면 각 국가별로 30개 종목만 테스트합니다.
 # 실제 운영 시에는 이 값을 False로 바꾸세요.
@@ -142,11 +144,13 @@ def main():
 
     country_code = sys.argv[1]
     config = COUNTRY_CONFIG[country_code]
-    output_filename = f"{country_code}_stocks.json"
+    output_filename = os.path.join(BASE_DIR, f"{country_code}_stocks.json")
 
     logging.info(f"[{config['name']}] 데이터 업데이트 작업을 시작합니다.")
     
     initial_stocks_df = get_stocks_by_country(country_code, config)
+
+
 
     if IS_TEST_MODE:
         logging.info(f"--- ⚠️ 테스트 모드: {len(initial_stocks_df)}개 중 {TEST_SAMPLE_SIZE}개만 사용합니다. ---")
@@ -162,6 +166,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
