@@ -23,13 +23,8 @@
         tbody tr:hover { background-color: #f1f1f1; }
         thead th { position: sticky; top: 0; z-index: 10; background-color: #007bff; color: #ffffff; font-weight: 600; }
         .new-item { background-color: #e7f7ff !important; }
-        /* ✅ [추가] 정렬 가능한 헤더에 마우스 커서를 올리면 클릭 가능함을 표시 */
-        thead th.sortable {
-            cursor: pointer;
-            user-select: none; /* 텍스트 선택 방지 */
-        }
-        thead th.sortable:hover {
-            background-color: #0056b3; /* 호버 시 약간 어둡게 */
+        thead th.sortable { cursor: pointer; user-select: none; }
+        thead th.sortable:hover { background-color: #0056b3; }
     </style>
 </head>
 <body>
@@ -48,17 +43,18 @@
         <div class="container">
             <h1>📈 52주 신고가 근접 종목 ({{ country_name }})</h1>
             <p class="last-updated">최근 업데이트: {{ last_updated }}</p>
-            <table>
+            
+            <table id="stock-table">
                 <thead>
                     <tr>
-                        <th>티커</th>
-                        <th>회사 이름</th>
-                        <th>섹터</th>
-                        <th>산업</th>
-                        <th>시가총액</th>
-                        <th>P/E</th>
-                        <th>현재가</th>
-                        <th>52주 신고가</th>
+                        <th class="sortable" onclick="sortTable(0, 'str')">티커</th>
+                        <th class="sortable" onclick="sortTable(1, 'str')">회사 이름</th>
+                        <th class="sortable" onclick="sortTable(2, 'str')">섹터</th>
+                        <th class="sortable" onclick="sortTable(3, 'str')">산업</th>
+                        <th class="sortable" onclick="sortTable(4, 'mcap')">시가총액</th>
+                        <th class="sortable" onclick="sortTable(5, 'num')">P/E</th>
+                        <th class="sortable" onclick="sortTable(6, 'price')">현재가</th>
+                        <th class="sortable" onclick="sortTable(7, 'price')">52주 신고가</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -84,6 +80,7 @@
     </main>
 
     <script>
+        // 메뉴 토글 기능
         const menuToggle = document.getElementById('menu-toggle');
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.getElementById('main-content');
@@ -91,10 +88,12 @@
             sidebar.classList.toggle('hidden');
             mainContent.classList.toggle('full-width');
         });
-                // ✅ [추가] 테이블 정렬을 위한 자바스크립트 코드
-        let sortDirection = {}; // 컬럼별 정렬 방향을 저장하는 객체
+        
+        // 테이블 정렬 기능
+        let sortDirection = {};
 
         function parseMarketCap(value) {
+            if (!value || typeof value !== 'string') return 0;
             const num = parseFloat(value.replace(/[^0-9.-]+/g, ""));
             const lastChar = value.slice(-1).toUpperCase();
             if (lastChar === 'T') return num * 1e12;
@@ -117,14 +116,14 @@
                 let aValue, bValue;
 
                 if (type === 'str') {
-                    aValue = aText;
-                    bValue = bText;
+                    aValue = aText.toLowerCase();
+                    bValue = bText.toLowerCase();
                 } else if (type === 'mcap') {
                     aValue = parseMarketCap(aText);
                     bValue = parseMarketCap(bText);
                 } else { // num, price
-                    aValue = parseFloat(aText.replace(/[^0-9.-]+/g, ""));
-                    bValue = parseFloat(bText.replace(/[^0-9.-]+/g, ""));
+                    aValue = parseFloat(aText.replace(/[^0-9.-]+/g, "")) || 0;
+                    bValue = parseFloat(bText.replace(/[^0-9.-]+/g, "")) || 0;
                 }
                 
                 if (aValue < bValue) return dir === 'asc' ? -1 : 1;
@@ -137,4 +136,3 @@
     </script>
 </body>
 </html>
-
