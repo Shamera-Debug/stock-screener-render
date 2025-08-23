@@ -21,9 +21,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # 최종 국가별 설정
 COUNTRY_CONFIG = {
     'us': { 'name': '미국 (USA)', 'market_cap_filter': '+Large (over $10bln)', 'currency_symbol': '$'},
-    'jp': { 'name': '일본 (Japan)', 'investpy_country': 'japan', 'yfinance_suffix': '.T', 'currency_symbol': '¥', 'top_n': 1500 },
-    'hk': { 'name': '홍콩 (Hong Kong)', 'investpy_country': 'hong kong', 'yfinance_suffix': '.HK', 'currency_symbol': 'HK$', 'top_n': 1500 },
-    'kr': { 'name': '한국 (Korea)', 'investpy_country': 'south korea', 'yfinance_suffix': '.KS', 'currency_symbol': '₩', 'top_n': 1500 }
+    'jp': { 'name': '일본 (Japan)', 'investpy_country': 'japan', 'yfinance_suffix': '.T', 'currency_symbol': '¥', 'top_n': 2000 },
+    'hk': { 'name': '홍콩 (Hong Kong)', 'investpy_country': 'hong kong', 'yfinance_suffix': '.HK', 'currency_symbol': 'HK$', 'top_n': 2000 },
+    'kr': { 'name': '한국 (Korea)', 'investpy_country': 'south korea', 'yfinance_suffix': '.KS', 'currency_symbol': '₩', 'top_n': 2000 }
 }
 
 def get_filtered_stocks(country_code, config):
@@ -143,3 +143,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
