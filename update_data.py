@@ -90,10 +90,13 @@ def filter_by_market_cap(df, country_code, config):
         
         df_caps = pd.DataFrame(market_caps)
         if not df_caps.empty:
-            df = df_caps.sort_values(by='MarketCap', ascending=False).head(top_n)
+            # ✅ [수정] 새로운 DF를 만드는 대신, 기존 DF에 시총 정보를 합칩니다.
+            # 'Ticker'를 기준으로 두 데이터를 합치므로 'KoreanName' 컬럼이 보존됩니다.
+            df = pd.merge(df, df_caps, on='Ticker', how='inner')
+            df = df.sort_values(by='MarketCap', ascending=False).head(top_n)
             logging.info(f"시가총액 상위 {len(df)}개 기업으로 필터링 완료.")
         else:
-            df = pd.DataFrame() # 시총 정보를 하나도 못가져온 경우 빈 DF 반환
+            df = pd.DataFrame()
     return df
 
 def find_52_week_high_stocks_from_df(stocks_df, country_config):
@@ -180,6 +183,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
