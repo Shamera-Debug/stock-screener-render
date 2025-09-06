@@ -162,22 +162,25 @@ def main():
         shutil.copyfile(output_filename, backup_filename)
 
     logging.info(f"[{config['name']}] 데이터 업데이트 작업을 시작합니다.")
-    
-    initial_stocks_df = get_filtered_stocks(country_code, config)
+
+    # ✅ [수정] 올바른 함수 이름으로 호출합니다.
+    initial_stocks_df = get_stocks_by_country(country_code, config)
 
     if IS_TEST_MODE:
         logging.info(f"--- ⚠️ 테스트 모드: {len(initial_stocks_df)}개 중 {TEST_SAMPLE_SIZE}개만 사용합니다. ---")
         initial_stocks_df = initial_stocks_df.head(TEST_SAMPLE_SIZE)
-    
-    found_stocks = find_52_week_high_stocks_from_df(initial_stocks_df, config)
-    
+
+    filtered_stocks_df = filter_by_market_cap(initial_stocks_df, country_code, config)
+    found_stocks = find_52_week_high_stocks_from_df(filtered_stocks_df, config)
+
     with open(output_filename, 'w', encoding='utf-8') as f:
         json.dump(found_stocks, f, ensure_ascii=False, indent=4)
-        
+
     logging.info(f"총 {len(found_stocks)}개의 종목 정보를 {output_filename} 파일에 저장했습니다.")
 
 if __name__ == '__main__':
     main()
+
 
 
 
