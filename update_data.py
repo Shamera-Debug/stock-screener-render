@@ -5,7 +5,8 @@ import logging
 import json
 import os
 import sys
-import investpy # pykrx 대신 investpy 사용
+from pykrx import stock
+import investpy
 import shutil
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -21,18 +22,17 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # 최종 국가별 설정
 COUNTRY_CONFIG = {
     'us': { 'name': '미국 (USA)', 'market_cap_filter': '+Large (over $10bln)', 'currency_symbol': '$'},
-    'jp': { 'name': '일본 (Japan)', 'investpy_country': 'japan', 'yfinance_suffix': '.T', 'currency_symbol': '¥', 'top_n': 2000 },
-    'hk': { 'name': '홍콩 (Hong Kong)', 'investpy_country': 'hong kong', 'yfinance_suffix': '.HK', 'currency_symbol': 'HK$', 'top_n': 2000 },
-    'kr': { 'name': '한국 (Korea)', 'investpy_country': 'south korea', 'yfinance_suffix': '.KS', 'currency_symbol': '₩', 'top_n': 2000 }
+    'jp': { 'name': '일본 (Japan)', 'investpy_country': 'japan', 'yfinance_suffix': '.T', 'currency_symbol': '¥', 'top_n': 1500 },
+    'hk': { 'name': '홍콩 (Hong Kong)', 'investpy_country': 'hong kong', 'yfinance_suffix': '.HK', 'currency_symbol': 'HK$', 'top_n': 1500 },
+    'kr': { 'name': '한국 (Korea)', 'yfinance_suffix': '.KS', 'currency_symbol': '₩', 'top_n': 1500 }
 }
 
-def get_filtered_stocks(country_code, config):
+def get_stocks_by_country(country_code, config):
     country_name = config['name']
-    logging.info(f"'{country_name}'의 종목 목록을 가져오는 중...")
-    
+    logging.info(f"'{country_name}'의 전체 종목 목록을 가져오는 중...")
+    df = pd.DataFrame()
     try:
         if country_code == 'us':
-            # ✅ [수정] NASDAQ과 NYSE를 각각 조회하여 합칩니다.
             market_cap_filter = config['market_cap_filter']
             all_dfs = []
             for exchange in ['NASDAQ', 'NYSE']:
@@ -42,32 +42,58 @@ def get_filtered_stocks(country_code, config):
                 foverview.set_filter(filters_dict=filters_dict)
                 exchange_df = foverview.screener_view(order='Market Cap.', ascend=False)
                 all_dfs.append(exchange_df)
-            
-            # 조회된 두 거래소의 결과를 하나의 데이터프레임으로 합침
             df = pd.concat(all_dfs, ignore_index=True)
 
-        else:
-            # 한국, 일본, 홍콩 모두 investpy 사용 (기존 코드와 동일)
+        elif country_code == 'kr':
+            # ✅ [수정] 한국: pykrx로 Ticker와 '한글 회사명'을 함께 가져옵니다.
+            logging.info("pykrx를 통해 KOSPI, KOSDAQ 전 종목 Ticker 및 회사명 가져오는 중...")
+            all_tickers_info = []
+            for market in ["KOSPI", "KOSDAQ"]:
+                tickers = stock.get_market_ticker_list(market=market)
+                suffix = ".KS" if market == "KOSPI" else ".KQ"
+                for ticker in tickers:
+                    # Ticker와 한글 회사명을 함께 저장
+                    all_tickers_info.append({
+                        'Ticker': f"{ticker}{suffix}",
+                        'KoreanName': stock.get_market_ticker_name(ticker)
+                    })
+            df = pd.DataFrame(all_tickers_info)
+
+        elif country_code in ['jp', 'hk']:
+            # 일본, 홍콩: investpy 사용
             country = config['investpy_country']
-            top_n = config.get('top_n', 1500)
-            logging.info(f"investpy를 통해 '{country}'의 시가총액 상위 {top_n}개 종목 가져오는 중...")
-            
-            all_stocks_df = investpy.get_stocks(country=country)
-            
-            # investpy가 'Market Cap' 컬럼을 제공하는 경우에만 필터링
-            if 'Market Cap' in all_stocks_df.columns:
-                df = all_stocks_df.sort_values(by='Market Cap', ascending=False).head(top_n)
-            else: # 제공하지 않는 경우(예: 한국)에는 전체 목록 사용 후 다음 단계에서 필터링
-                df = all_stocks_df
-            
-            df = df.rename(columns={'symbol': 'Ticker'})
-            df['Ticker'] = df['Ticker'] + config['yfinance_suffix']
+            logging.info(f"investpy를 통해 '{country}'의 전체 종목 목록 가져오는 중...")
+            stocks_df = investpy.get_stocks(country=country)
+            df['Ticker'] = stocks_df['symbol'] + config['yfinance_suffix']
+        
+        logging.info(f"성공! 총 {len(df)}개 기업 정보를 확인합니다.")
+        return df
 
     except Exception as e:
         logging.error(f"{country_name} 기업 목록을 불러오는 데 실패했습니다: {e}")
         return pd.DataFrame()
 
-    logging.info(f"성공! 총 {len(df)}개 기업 정보를 1차 필터링했습니다.")
+def filter_by_market_cap(df, country_code, config):
+    # 미국은 Finviz에서 이미 필터링되었으므로, 그 외 국가에만 시총 필터링 적용
+    if country_code not in ['us']:
+        top_n = config.get('top_n', 1500)
+        logging.info(f"총 {len(df)}개 종목의 시가총액 정보 조회 시작 (상위 {top_n}개 필터링)...")
+        market_caps = []
+        for i, ticker in enumerate(df['Ticker']):
+            if (i + 1) % 50 == 0: logging.info(f"--> 시총 조회 진행: [{i+1}/{len(df)}]")
+            try:
+                info = yf.Ticker(ticker).info
+                if 'marketCap' in info and info['marketCap'] is not None:
+                    market_caps.append({'Ticker': ticker, 'MarketCap': info['marketCap']})
+            except Exception:
+                continue
+        
+        df_caps = pd.DataFrame(market_caps)
+        if not df_caps.empty:
+            df = df_caps.sort_values(by='MarketCap', ascending=False).head(top_n)
+            logging.info(f"시가총액 상위 {len(df)}개 기업으로 필터링 완료.")
+        else:
+            df = pd.DataFrame() # 시총 정보를 하나도 못가져온 경우 빈 DF 반환
     return df
 
 def find_52_week_high_stocks_from_df(stocks_df, country_config):
@@ -99,13 +125,14 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
             high_52_week = info.get('fiftyTwoWeekHigh', hist['High'].max())
             if not current_price or not high_52_week: continue
 
-            if current_price >= high_52_week * 0.98:
+            if current_price >= high_52_week * 0.97:
                 market_cap_value = info.get('marketCap', 0)
                 stock_data = {
                     'Ticker': ticker,
-                    'Company Name': company_name or 'N/A',
-                    'Sector': sector or 'N/A',
-                    'Industry': industry or 'N/A',
+                    # ✅ [수정] yfinance의 영문 이름 대신, row에 담겨있는 한글 이름을 사용
+                    'Company Name': row.get('KoreanName', info.get('longName', 'N/A')),
+                    'Sector': info.get('sector', 'N/A'),
+                    'Industry': info.get('industry', 'N/A'),
                     'Market Cap': f"{currency}{market_cap_value:,}",
                     'P/E (TTM)': f"{info.get('trailingPE', 0):.2f}" if info.get('trailingPE') else 'N/A',
                     'Current Price': f"{currency}{current_price:,.2f}",
@@ -151,5 +178,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
