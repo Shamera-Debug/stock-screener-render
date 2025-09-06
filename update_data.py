@@ -32,14 +32,22 @@ def get_filtered_stocks(country_code, config):
     
     try:
         if country_code == 'us':
-            # 미국: Finviz 사용
-            logging.info(f"finvizfinance를 통해 '{config['market_cap_filter']}' 기준 스크리닝 중...")
-            foverview = Overview()
-            filters_dict = {'Exchange': ['NASDAQ', 'NYSE'], 'Market Cap.': config['market_cap_filter']}
-            foverview.set_filter(filters_dict=filters_dict)
-            df = foverview.screener_view(order='Market Cap.', ascend=False)
+            # ✅ [수정] NASDAQ과 NYSE를 각각 조회하여 합칩니다.
+            market_cap_filter = config['market_cap_filter']
+            all_dfs = []
+            for exchange in ['NASDAQ', 'NYSE']:
+                logging.info(f"finvizfinance를 통해 '{exchange}' 거래소 스크리닝 중...")
+                foverview = Overview()
+                filters_dict = {'Exchange': exchange, 'Market Cap.': market_cap_filter}
+                foverview.set_filter(filters_dict=filters_dict)
+                exchange_df = foverview.screener_view(order='Market Cap.', ascend=False)
+                all_dfs.append(exchange_df)
+            
+            # 조회된 두 거래소의 결과를 하나의 데이터프레임으로 합침
+            df = pd.concat(all_dfs, ignore_index=True)
+
         else:
-            # ✅ [수정] 한국, 일본, 홍콩 모두 investpy 사용
+            # 한국, 일본, 홍콩 모두 investpy 사용 (기존 코드와 동일)
             country = config['investpy_country']
             top_n = config.get('top_n', 1500)
             logging.info(f"investpy를 통해 '{country}'의 시가총액 상위 {top_n}개 종목 가져오는 중...")
@@ -49,7 +57,7 @@ def get_filtered_stocks(country_code, config):
             # investpy가 'Market Cap' 컬럼을 제공하는 경우에만 필터링
             if 'Market Cap' in all_stocks_df.columns:
                 df = all_stocks_df.sort_values(by='Market Cap', ascending=False).head(top_n)
-            else: # 제공하지 않는 경우(예: 구버전)에는 전체 목록 사용
+            else: # 제공하지 않는 경우(예: 한국)에는 전체 목록 사용 후 다음 단계에서 필터링
                 df = all_stocks_df
             
             df = df.rename(columns={'symbol': 'Ticker'})
@@ -143,4 +151,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
