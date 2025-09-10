@@ -55,6 +55,7 @@
                         <th class="sortable" onclick="sortTable(5, 'num')">P/E</th>
                         <th class="sortable" onclick="sortTable(6, 'price')">현재가</th>
                         <th class="sortable" onclick="sortTable(7, 'price')">52주 신고가</th>
+                        <th class="sortable" onclick="sortTable(8, 'price')">신고가 차액</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -68,10 +69,11 @@
                         <td>{{ stock['P/E (TTM)'] }}</td>
                         <td>{{ stock['Current Price'] }}</td>
                         <td>{{ stock['52-Week High'] }}</td>
+                        <td>{{ stock['Price Diff'] }}</td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="8" style="text-align: center; padding: 20px;">조건에 맞는 종목을 찾지 못했거나, 데이터가 아직 준비되지 않았습니다.</td>
+                        <td colspan="9" style="text-align: center; padding: 20px;">조건에 맞는 종목을 찾지 못했거나, 데이터가 아직 준비되지 않았습니다.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -136,3 +138,4 @@
     </script>
 </body>
 </html>
+
