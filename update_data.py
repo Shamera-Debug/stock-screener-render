@@ -130,6 +130,7 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
 
             if current_price >= high_52_week * 0.97:
                 market_cap_value = info.get('marketCap', 0)
+                price_diff = current_price - high_52_week
                 stock_data = {
                     'Ticker': ticker,
                     # ✅ [수정] yfinance의 영문 이름 대신, row에 담겨있는 한글 이름을 사용
@@ -140,6 +141,7 @@ def find_52_week_high_stocks_from_df(stocks_df, country_config):
                     'P/E (TTM)': f"{info.get('trailingPE', 0):.2f}" if info.get('trailingPE') else 'N/A',
                     'Current Price': f"{currency}{current_price:,.2f}",
                     '52-Week High': f"{currency}{high_52_week:,.2f}",
+                    'Price Diff': f"{currency}{price_diff:,.2f}"
                 }
                 high_stocks.append(stock_data)
                 logging.info(f"✅ [{index+1:04d}/{total_stocks}] 발견! {ticker}")
@@ -183,6 +185,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
